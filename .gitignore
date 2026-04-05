@@ -1,0 +1,65 @@
+# ========================
+# Flutter / Dart
+# ========================
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/build/
+frontend/.packages
+frontend/.pub-cache/
+frontend/.pub/
+frontend/.fvm/
+*.lock
+!frontend/pubspec.lock
+
+# ========================
+# Spring Boot / Java / Maven
+# ========================
+backend/target/
+backend/.idea/
+backend/*.iml
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/mvnw
+backend/mvnw.cmd
+
+# ========================
+# Python / Camera Processor
+# ========================
+camera-processor/venv/
+camera-processor/__pycache__/
+camera-processor/*.pyc
+
+# ========================
+# Environment & Secrets
+# ========================
+*.env
+.env.*
+application-local.properties
+backend/src/main/resources/application-local.properties
+
+# ========================
+# IDE / Editor
+# ========================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ========================
+# OS Files
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========================
+# Build outputs
+# ========================
+*.apk
+*.aab
+*.jar
+!backend/mvnw.jar
