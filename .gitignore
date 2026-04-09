@@ -21,7 +21,7 @@ backend/*.iml
 backend/.mvn/wrapper/maven-wrapper.jar
 backend/mvnw
 backend/mvnw.cmd
-
+backend/src/main/resources/application.properties
 # ========================
 # Python / Camera Processor
 # ========================
