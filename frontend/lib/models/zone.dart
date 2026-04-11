@@ -10,14 +10,11 @@ class Zone {
   /// Short zone identifier (e.g. 'A').
   final String zoneCode;
 
-  /// Human-readable zone name (e.g. 'Zone A').
+  /// Human-readable zone name (e.g. 'Main Parking').
   final String zoneName;
 
   /// Access type string: 'ALL', 'CARPOOL_ONLY', or 'GUARD_ONLY'.
   final String accessType;
-
-  /// Total number of spots in this zone.
-  final int totalSpots;
 
   /// Creates a [Zone].
   const Zone({
@@ -25,23 +22,16 @@ class Zone {
     required this.zoneCode,
     required this.zoneName,
     required this.accessType,
-    required this.totalSpots,
   });
 
-  /// Deserialises from the backend JSON payload.
+  /// Deserialises from the backend JSON payload (camelCase keys).
   factory Zone.fromJson(Map<String, dynamic> json) => Zone(
-        id:         json['id'],
-        zoneCode:   json['zoneCode'],
-        zoneName:   json['zoneName'],
-        accessType: json['accessType'],
-        totalSpots: json['totalSpots'] ?? 0,
+        id:         json['id'] as int,
+        zoneCode:   json['zoneCode'] as String,
+        zoneName:   json['zoneName'] as String,
+        accessType: json['accessType'] as String,
       );
 
-  Map<String, dynamic> toJson() => {
-        'id':         id,
-        'zoneCode':   zoneCode,
-        'zoneName':   zoneName,
-        'accessType': accessType,
-        'totalSpots': totalSpots,
-      };
+  bool get isCarPoolOnly => accessType == 'CARPOOL_ONLY';
+  bool get isGuardOnly   => accessType == 'GUARD_ONLY';
 }

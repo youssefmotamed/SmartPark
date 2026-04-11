@@ -5,7 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
-import 'student_home_placeholder.dart';
+import 'student_home_screen.dart';
 import 'profile_screen.dart';
 
 /// Persistent layout wrapper for all student screens.
@@ -33,11 +33,11 @@ class _StudentShellState extends State<StudentShell>
     _NavItem(icon: LucideIcons.user,    label: 'Profile'),
   ];
 
-  static const _screens = [
-    StudentHomePlaceholder(),
-    _TabPlaceholder(title: 'Points',   icon: LucideIcons.zap,    note: 'Coming in Phase 3'),
-    _TabPlaceholder(title: 'Badge',    icon: LucideIcons.shield,  note: 'Coming in Phase 3'),
-    ProfileScreen(),
+  static final _screens = [
+    const StudentHomeScreen(),
+    const _TabPlaceholder(title: 'Points',  icon: LucideIcons.zap,   note: 'Coming in Phase 3'),
+    const _TabPlaceholder(title: 'Badge',   icon: LucideIcons.shield, note: 'Coming in Phase 3'),
+    const ProfileScreen(),
   ];
 
   late final List<AnimationController> _tabControllers;
