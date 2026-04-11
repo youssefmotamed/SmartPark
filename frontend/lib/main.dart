@@ -2,12 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'config/api_config.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
+import 'screens/auth/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/student/student_shell.dart';
+import 'screens/guard/guard_shell.dart';
+import 'screens/admin/admin_shell.dart';
 
 void main() {
   runApp(const SmartParkApp());
@@ -33,60 +35,6 @@ class SmartParkApp extends StatelessWidget {
   }
 }
 
-/// Splash screen that resolves the initial route based on stored credentials.
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Delay allows the widget tree to settle before navigation.
-    Future.delayed(const Duration(milliseconds: 300), _redirect);
-  }
-
-  Future<void> _redirect() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(ApiConfig.tokenKey);
-    final role = prefs.getString(ApiConfig.userRoleKey);
-
-    if (!mounted) return;
-
-    if (token == null) {
-      context.go('/login');
-      return;
-    }
-
-    switch (role) {
-      case 'GUARD':
-        context.go('/guard/home');
-      case 'ADMIN':
-        context.go('/admin/home');
-      default:
-        context.go('/student/home');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
-  }
-}
-
-/// Returns a minimal placeholder scaffold used for routes not yet implemented.
-Widget _placeholder(String name) {
-  return Scaffold(
-    appBar: AppBar(title: Text(name)),
-    body: Center(child: Text(name)),
-  );
-}
-
 /// Application router — all routes are defined here.
 final GoRouter _router = GoRouter(
   initialLocation: '/splash',
@@ -103,17 +51,30 @@ final GoRouter _router = GoRouter(
       path: '/register',
       builder: (_, _) => const RegisterScreen(),
     ),
+
+    // ── Student shell ────────────────────────────────────────────────────────
+    // StudentShell manages its own 4-tab IndexedStack internally.
+    // Additional student sub-routes (reservation, QR, etc.) will be added
+    // here as full-screen GoRoutes in Phase 1–4.
     GoRoute(
       path: '/student/home',
-      builder: (_, _) => _placeholder('Student Home'),
+      builder: (_, _) => const StudentShell(),
     ),
+
+    // ── Guard shell ──────────────────────────────────────────────────────────
+    // GuardShell manages its own 4-tab IndexedStack internally.
+    // Guard sub-routes (scanner, guest parking, violations) added in Phase 2.
     GoRoute(
       path: '/guard/home',
-      builder: (_, _) => _placeholder('Guard Home'),
+      builder: (_, _) => const GuardShell(),
     ),
+
+    // ── Admin shell ──────────────────────────────────────────────────────────
+    // AdminShell manages its own 3-tab IndexedStack internally.
+    // Admin sub-routes (users, badges, analytics) added in Phase 6.
     GoRoute(
       path: '/admin/home',
-      builder: (_, _) => _placeholder('Admin Home'),
+      builder: (_, _) => const AdminShell(),
     ),
   ],
 );
