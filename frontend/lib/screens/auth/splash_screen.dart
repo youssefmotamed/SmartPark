@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import '../../config/colors.dart';
+import '../../providers/auth_provider.dart';
 
 /// Full-screen animated splash shown at app launch.
 ///
@@ -130,21 +132,8 @@ class _SplashScreenState extends State<SplashScreen>
     _navigate(results[0] as String);
   }
 
-  /*Future<String> _checkAuth() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(ApiConfig.tokenKey);
-    final role  = prefs.getString(ApiConfig.userRoleKey);
-
-    if (token == null) return '/login';
-    switch (role) {
-      case 'GUARD': return '/guard/home';
-      case 'ADMIN': return '/admin/home';
-      default:      return '/student/home';
-    }
-  }*/
   Future<String> _checkAuth() async {
-  // TEMP: skip auth check, go straight to student shell
-  return '/student/home';
+    return context.read<AuthProvider>().checkAuthStatus();
   }
 
   void _navigate(String route) => context.go(route);

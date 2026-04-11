@@ -174,19 +174,23 @@ class _LoginScreenState extends State<LoginScreen>
     context.read<AuthProvider>().clearError();
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    try {
-      await context.read<AuthProvider>().login(
-            _emailController.text.trim(),
-            _passwordController.text,
-          );
-      // Phase 1: role-based routing goes here.
-    } on UnimplementedError {
-      // Phase 0 mock — navigate so the full UI flow can be verified.
-      if (mounted) context.go('/student/home');
+    await context.read<AuthProvider>().login(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    if (auth.error != null) {
+      _shakeController.forward(from: 0);
       return;
-    } catch (_) {
-      // Real errors are surfaced via auth.error; play the shake animation.
-      if (mounted) _shakeController.forward(from: 0);
+    }
+
+    switch (auth.role) {
+      case 'GUARD': context.go('/guard/home');
+      case 'ADMIN': context.go('/admin/home');
+      default:      context.go('/student/home');
     }
   }
 

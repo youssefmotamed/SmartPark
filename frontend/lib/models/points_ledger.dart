@@ -34,13 +34,22 @@ class PointsLedger {
 
   /// Deserialises from the backend JSON payload.
   factory PointsLedger.fromJson(Map<String, dynamic> json) => PointsLedger(
-        id: json['id'] as int,
-        badgeId: json['badge_id'] as int,
-        points: json['points'] as int,
-        reason: json['reason'] as String,
-        earnedAt: DateTime.parse(json['earned_at'] as String),
-        expiresAt: json['expires_at'] != null
-            ? DateTime.parse(json['expires_at'] as String)
+        id:        json['id'],
+        badgeId:   json['badgeId'],
+        points:    json['points'],
+        reason:    json['reason'],
+        earnedAt:  DateTime.parse(json['earnedAt'] as String),
+        expiresAt: json['expiresAt'] != null
+            ? DateTime.parse(json['expiresAt'] as String)
             : null,
       );
+
+  Map<String, dynamic> toJson() => {
+        'id':        id,
+        'badgeId':   badgeId,
+        'points':    points,
+        'reason':    reason,
+        'earnedAt':  earnedAt.toIso8601String(),
+        'expiresAt': expiresAt?.toIso8601String(),
+      };
 }

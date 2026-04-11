@@ -38,16 +38,26 @@ class Badge {
 
   /// Deserialises from the backend JSON payload.
   factory Badge.fromJson(Map<String, dynamic> json) => Badge(
-        id: json['id'] as int,
-        badgeType: json['badge_type'] as String,
-        badgeCode: json['badge_code'] as String,
-        pointsBalance: json['points_balance'] as int,
-        isActive: json['is_active'] as bool,
-        suspendedUntil: json['suspended_until'] != null
-            ? DateTime.parse(json['suspended_until'] as String)
+        id:             json['id'],
+        badgeType:      json['badgeType'],
+        badgeCode:      json['badgeCode']      ?? '',
+        pointsBalance:  json['pointsBalance']  ?? 0,
+        isActive:       json['isActive']       ?? true,
+        suspendedUntil: json['suspendedUntil'] != null
+            ? DateTime.parse(json['suspendedUntil'] as String)
             : null,
-        ownerId: json['owner_id'] as int,
+        ownerId: json['ownerId'] ?? 0,
       );
+
+  Map<String, dynamic> toJson() => {
+        'id':             id,
+        'badgeType':      badgeType,
+        'badgeCode':      badgeCode,
+        'pointsBalance':  pointsBalance,
+        'isActive':       isActive,
+        'suspendedUntil': suspendedUntil?.toIso8601String(),
+        'ownerId':        ownerId,
+      };
 
   /// Returns true when the suspension window is active right now.
   bool get isSuspended =>

@@ -1,10 +1,13 @@
 // admin_shell.dart — Admin role persistent shell: top bar + 3-tab bottom nav
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
+import '../../providers/auth_provider.dart';
 import 'admin_home_placeholder.dart';
 
 /// Admin accent — soft purple distinct from student blue and guard amber.
@@ -65,6 +68,40 @@ class _AdminShellState extends State<AdminShell>
     super.dispose();
   }
 
+  void _showLogoutDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surfaceLight,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        title: Text('Logout', style: AppTypography.displaySmall),
+        content: Text('Are you sure you want to logout?', style: AppTypography.bodyMedium),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await context.read<AuthProvider>().logout();
+              if (context.mounted) context.go('/login');
+            },
+            child: Text(
+              'Logout',
+              style: AppTypography.labelMedium.copyWith(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onTabTapped(int index) {
     if (index == _currentIndex) return;
     _tabControllers[index].forward(from: 0);
@@ -79,6 +116,7 @@ class _AdminShellState extends State<AdminShell>
         children: [
           _TopBar(
             onBellTap: () => debugPrint('[AdminShell] notifications tapped'),
+            onLogoutTap: () => _showLogoutDialog(context),
           ),
           Expanded(
             child: IndexedStack(
@@ -104,8 +142,9 @@ class _AdminShellState extends State<AdminShell>
 
 class _TopBar extends StatelessWidget {
   final VoidCallback onBellTap;
+  final VoidCallback onLogoutTap;
 
-  const _TopBar({required this.onBellTap});
+  const _TopBar({required this.onBellTap, required this.onLogoutTap});
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +212,20 @@ class _TopBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(LucideIcons.bell, size: 20, color: AppColors.textSecondary),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Logout
+          GestureDetector(
+            onTap: onLogoutTap,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.error.withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(LucideIcons.logOut, size: 20, color: AppColors.error),
             ),
           ),
         ],

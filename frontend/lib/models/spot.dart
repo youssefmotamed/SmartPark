@@ -14,6 +14,9 @@ class Spot {
   /// Short zone identifier (e.g. 'A').
   final String zoneCode;
 
+  /// Human-readable zone name (e.g. 'Zone A').
+  final String zoneName;
+
   /// Human-readable spot label (e.g. 'A3').
   final String spotLabel;
 
@@ -28,6 +31,7 @@ class Spot {
     required this.id,
     required this.zoneId,
     required this.zoneCode,
+    required this.zoneName,
     required this.spotLabel,
     required this.status,
     required this.statusUpdatedAt,
@@ -35,14 +39,24 @@ class Spot {
 
   /// Deserialises from the backend JSON payload.
   factory Spot.fromJson(Map<String, dynamic> json) => Spot(
-        id: json['id'] as int,
-        zoneId: json['zone_id'] as int,
-        zoneCode: json['zone_code'] as String,
-        spotLabel: json['spot_label'] as String,
-        status: json['status'] as String,
-        statusUpdatedAt:
-            DateTime.parse(json['status_updated_at'] as String),
+        id:              json['id'],
+        zoneId:          json['zoneId']          ?? 0,
+        zoneCode:        json['zoneCode'],
+        zoneName:        json['zoneName']         ?? '',
+        spotLabel:       json['spotLabel'],
+        status:          json['status'],
+        statusUpdatedAt: DateTime.parse(json['statusUpdatedAt'] as String),
       );
+
+  Map<String, dynamic> toJson() => {
+        'id':              id,
+        'zoneId':          zoneId,
+        'zoneCode':        zoneCode,
+        'zoneName':        zoneName,
+        'spotLabel':       spotLabel,
+        'status':          status,
+        'statusUpdatedAt': statusUpdatedAt.toIso8601String(),
+      };
 
   /// Returns the colour that represents the current [status] on the map.
   Color get statusColor {

@@ -8,22 +8,8 @@ import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
 import '../../providers/auth_provider.dart';
-
-// ── Mock data ────────────────────────────────────────────────────────────────
-// TODO: replace with ProfileService.getProfile() in Task 1.9 (Week 3)
-const _mockUser = {
-  'fullName': 'Walid Ahmed',
-  'studentId': '20221234',
-  'email': 'walid@student.aast.edu',
-  'plateNumber': 'ABC 1234',
-  'totalPoints': 85,
-  'activeBadge': {
-    'type': 'CARPOOL_3',
-    'status': 'ACTIVE',
-    'memberCount': 2,
-    'totalSlots': 3,
-  },
-};
+import '../../services/base_api_service.dart';
+import '../../services/profile_service.dart';
 
 /// Student profile screen — shows identity, points, active badge, and logout.
 ///
@@ -40,13 +26,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
+  ProfileResponse? _profile;
+  bool    _isLoading = true;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
-    )..forward();
+    );
+    _loadProfile();
   }
 
   @override
@@ -55,11 +46,32 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
+  // ── Data loading ─────────────────────────────────────────────────────────────
+
+  Future<void> _loadProfile() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final profile = await ProfileService().getProfile();
+      if (!mounted) return;
+      setState(() { _profile = profile; _isLoading = false; });
+      _animController.forward(from: 0);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() { _error = e.message; _isLoading = false; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Connection error. Check your network.';
+        _isLoading = false;
+      });
+    }
+  }
+
   // ── Staggered section animation helper ──────────────────────────────────────
 
   Widget _animated(Widget child, {required double delayMs}) {
     final start = delayMs / 400.0;
-    final end = (start + 0.5).clamp(0.0, 1.0);
+    final end   = (start + 0.5).clamp(0.0, 1.0);
 
     final opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -83,16 +95,76 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  // ── Badge helpers ─────────────────────────────────────────────────────────────
+
+  Color _badgeBorderColor(String? type) {
+    switch (type) {
+      case 'CARPOOL_2': return AppColors.carpool2;
+      case 'CARPOOL_3': return AppColors.carpool3;
+      case 'CARPOOL_4': return AppColors.carpool4;
+      case 'CARPOOL_5': return AppColors.carpool5;
+      default:          return AppColors.individual;
+    }
+  }
+
+  String _badgeDisplayName(String? type) {
+    switch (type) {
+      case 'CARPOOL_2': return 'Carpool 2';
+      case 'CARPOOL_3': return 'Carpool 3';
+      case 'CARPOOL_4': return 'Carpool 4';
+      case 'CARPOOL_5': return 'Carpool 5';
+      default:          return 'Individual';
+    }
+  }
+
   // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final fullName    = _mockUser['fullName']  as String;
-    final studentId   = _mockUser['studentId'] as String;
-    final email       = _mockUser['email']     as String;
-    final plate       = _mockUser['plateNumber'] as String;
-    final points      = _mockUser['totalPoints'] as int;
-    final badge       = _mockUser['activeBadge'] as Map<String, dynamic>;
+    if (_isLoading) return _buildLoading();
+    if (_error != null) return _buildError();
+    return _buildContent();
+  }
+
+  Widget _buildLoading() {
+    return const Scaffold(
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(LucideIcons.wifiOff, size: 48, color: AppColors.textTertiary),
+            const SizedBox(height: 16),
+            Text(_error!, style: AppTypography.bodyMedium, textAlign: TextAlign.center),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _loadProfile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.background,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+                ),
+              ),
+              child: Text('Retry', style: AppTypography.labelMedium.copyWith(color: AppColors.background)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    final p = _profile!;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -105,38 +177,23 @@ class _ProfileScreenState extends State<ProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ── 1 · Avatar + name ──────────────────────────────────────────
-            _animated(
-              _buildHeader(fullName, studentId),
-              delayMs: 0,
-            ),
+            _animated(_buildHeader(p.fullName, p.studentId), delayMs: 0),
             const SizedBox(height: AppSpacing.lg),
 
             // ── 2 · Info card ──────────────────────────────────────────────
-            _animated(
-              _buildInfoCard(email, plate),
-              delayMs: 80,
-            ),
+            _animated(_buildInfoCard(p.email, p.plateNumber), delayMs: 80),
             const SizedBox(height: AppSpacing.md),
 
             // ── 3 · Points card ────────────────────────────────────────────
-            _animated(
-              _buildPointsCard(points),
-              delayMs: 160,
-            ),
+            _animated(_buildPointsCard(p.totalPoints), delayMs: 160),
             const SizedBox(height: AppSpacing.sm + 4),
 
             // ── 4 · Badge card ─────────────────────────────────────────────
-            _animated(
-              _buildBadgeCard(badge),
-              delayMs: 240,
-            ),
+            _animated(_buildBadgeCard(p.activeBadge), delayMs: 240),
             const SizedBox(height: AppSpacing.xl),
 
             // ── 5 · Logout button ──────────────────────────────────────────
-            _animated(
-              _buildLogoutButton(context),
-              delayMs: 320,
-            ),
+            _animated(_buildLogoutButton(context), delayMs: 320),
             const SizedBox(height: AppSpacing.lg),
           ],
         ),
@@ -152,7 +209,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
     return Column(
       children: [
-        // Avatar circle
         Container(
           width: 72,
           height: 72,
@@ -193,7 +249,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       child: Column(
         children: [
-          // Email row
           Padding(
             padding: const EdgeInsets.all(AppSpacing.cardPadding),
             child: Row(
@@ -209,9 +264,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             ),
           ),
-          // Divider
-          const Divider(height: 1, color: AppColors.divider, indent: 46, endIndent: 0),
-          // Plate row
+          const Divider(height: 1, color: AppColors.divider, indent: 46),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.cardPadding),
             child: Row(
@@ -264,50 +317,50 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildBadgeCard(Map<String, dynamic> badge) {
-    final memberCount = badge['memberCount'] as int;
-    final totalSlots  = badge['totalSlots']  as int;
+  Widget _buildBadgeCard(ActiveBadgeInfo? badge) {
+    final type        = badge?.type;
+    final status      = badge?.status ?? 'ACTIVE';
+    final accentColor = _badgeBorderColor(type);
+    final displayName = _badgeDisplayName(type);
+    final isActive    = status == 'ACTIVE';
+
+    // TODO: fetch full badge details from GET /badges/{id} for member count
 
     return _TappableCard(
       onTap: () => debugPrint('Navigate to Badges — Phase 5'),
-      accentLeft: AppColors.carpool3,
+      accentLeft: accentColor,
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Badge type row
                 Row(
                   children: [
-                    const Icon(LucideIcons.creditCard, size: 18, color: AppColors.carpool3),
+                    Icon(LucideIcons.creditCard, size: 18, color: accentColor),
                     const SizedBox(width: 8),
-                    Text('Carpool 3', style: AppTypography.labelMedium),
+                    Text(displayName, style: AppTypography.labelMedium),
                   ],
                 ),
                 const SizedBox(height: 4),
-                // Status row
                 Row(
                   children: [
                     Container(
                       width: 6,
                       height: 6,
-                      decoration: const BoxDecoration(
-                        color: AppColors.success,
+                      decoration: BoxDecoration(
+                        color: isActive ? AppColors.success : AppColors.textTertiary,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Active',
-                      style: AppTypography.bodySmall.copyWith(color: AppColors.success),
+                      isActive ? 'Active' : status,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: isActive ? AppColors.success : AppColors.textTertiary,
+                      ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$memberCount of $totalSlots members',
-                  style: AppTypography.bodySmall,
                 ),
               ],
             ),
@@ -335,10 +388,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           children: [
             const Icon(LucideIcons.logOut, size: 18, color: AppColors.error),
             const SizedBox(width: 8),
-            Text(
-              'Logout',
-              style: AppTypography.labelLarge.copyWith(color: AppColors.error),
-            ),
+            Text('Logout', style: AppTypography.labelLarge.copyWith(color: AppColors.error)),
           ],
         ),
       ),
@@ -356,18 +406,13 @@ class _ProfileScreenState extends State<ProfileScreen>
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         title: Text('Logout', style: AppTypography.displaySmall),
-        content: Text(
-          'Are you sure you want to logout?',
-          style: AppTypography.bodyMedium,
-        ),
+        content: Text('Are you sure you want to logout?', style: AppTypography.bodyMedium),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary),
             ),
           ),
           TextButton(
@@ -414,7 +459,7 @@ class _TappableCardState extends State<_TappableCard> {
     return GestureDetector(
       onTap: widget.onTap,
       onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
+      onTapUp:   (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
         scale: _pressed ? 0.98 : 1.0,

@@ -30,10 +30,18 @@ class Zone {
 
   /// Deserialises from the backend JSON payload.
   factory Zone.fromJson(Map<String, dynamic> json) => Zone(
-        id: json['id'] as int,
-        zoneCode: json['zone_code'] as String,
-        zoneName: json['zone_name'] as String,
-        accessType: json['access_type'] as String,
-        totalSpots: json['total_spots'] as int,
+        id:         json['id'],
+        zoneCode:   json['zoneCode'],
+        zoneName:   json['zoneName'],
+        accessType: json['accessType'],
+        totalSpots: json['totalSpots'] ?? 0,
       );
+
+  Map<String, dynamic> toJson() => {
+        'id':         id,
+        'zoneCode':   zoneCode,
+        'zoneName':   zoneName,
+        'accessType': accessType,
+        'totalSpots': totalSpots,
+      };
 }

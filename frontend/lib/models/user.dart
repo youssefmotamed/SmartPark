@@ -42,13 +42,24 @@ class User {
 
   /// Deserialises from the backend JSON payload.
   factory User.fromJson(Map<String, dynamic> json) => User(
-        id: json['id'] as int,
-        fullName: json['full_name'] as String,
-        email: json['email'] as String,
-        studentId: json['student_id'] as String? ?? '',
-        plateNumber: json['plate_number'] as String? ?? '',
-        role: json['role'] as String,
-        isActive: json['is_active'] as bool,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        id:          json['id'],
+        fullName:    json['fullName'],
+        email:       json['email'],
+        studentId:   json['studentId']   ?? '',
+        plateNumber: json['plateNumber'] ?? '',
+        role:        json['role'],
+        isActive:    json['isActive']    ?? true,
+        createdAt:   DateTime.parse(json['createdAt'] as String),
       );
+
+  Map<String, dynamic> toJson() => {
+        'id':          id,
+        'fullName':    fullName,
+        'email':       email,
+        'studentId':   studentId,
+        'plateNumber': plateNumber,
+        'role':        role,
+        'isActive':    isActive,
+        'createdAt':   createdAt.toIso8601String(),
+      };
 }

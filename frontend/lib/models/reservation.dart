@@ -54,24 +54,38 @@ class Reservation {
 
   /// Deserialises from the backend JSON payload.
   factory Reservation.fromJson(Map<String, dynamic> json) => Reservation(
-        id: json['id'] as int,
-        badgeId: json['badge_id'] as int,
-        spotId: json['spot_id'] as int,
-        spotLabel: json['spot_label'] as String,
-        zoneCode: json['zone_code'] as String,
-        status: json['status'] as String,
-        reservedAt: DateTime.parse(json['reserved_at'] as String),
-        expiresAt: json['expires_at'] != null
-            ? DateTime.parse(json['expires_at'] as String)
+        id:         json['id'],
+        badgeId:    json['badgeId'],
+        spotId:     json['spotId'],
+        spotLabel:  json['spotLabel'],
+        zoneCode:   json['zoneCode'],
+        status:     json['status'],
+        reservedAt: DateTime.parse(json['reservedAt'] as String),
+        expiresAt:  json['expiresAt'] != null
+            ? DateTime.parse(json['expiresAt'] as String)
             : null,
-        enteredAt: json['entered_at'] != null
-            ? DateTime.parse(json['entered_at'] as String)
+        enteredAt:  json['enteredAt'] != null
+            ? DateTime.parse(json['enteredAt'] as String)
             : null,
-        exitedAt: json['exited_at'] != null
-            ? DateTime.parse(json['exited_at'] as String)
+        exitedAt:   json['exitedAt'] != null
+            ? DateTime.parse(json['exitedAt'] as String)
             : null,
-        qrCode: json['qr_code'] as String?,
+        qrCode: json['qrCode'] as String?,
       );
+
+  Map<String, dynamic> toJson() => {
+        'id':         id,
+        'badgeId':    badgeId,
+        'spotId':     spotId,
+        'spotLabel':  spotLabel,
+        'zoneCode':   zoneCode,
+        'status':     status,
+        'reservedAt': reservedAt.toIso8601String(),
+        'expiresAt':  expiresAt?.toIso8601String(),
+        'enteredAt':  enteredAt?.toIso8601String(),
+        'exitedAt':   exitedAt?.toIso8601String(),
+        'qrCode':     qrCode,
+      };
 
   /// Whether the student has scanned in at the gate.
   bool get hasEntered => enteredAt != null;

@@ -41,12 +41,22 @@ class AppNotification {
   /// Deserialises from the backend JSON payload.
   factory AppNotification.fromJson(Map<String, dynamic> json) =>
       AppNotification(
-        id: json['id'] as int,
-        userId: json['user_id'] as int,
-        title: json['title'] as String,
-        message: json['message'] as String,
-        type: json['type'] as String,
-        isRead: json['is_read'] as bool,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        id:        json['id'],
+        userId:    json['userId'],
+        title:     json['title'],
+        message:   json['message'],
+        type:      json['type'],
+        isRead:    json['isRead']    ?? false,
+        createdAt: DateTime.parse(json['createdAt'] as String),
       );
+
+  Map<String, dynamic> toJson() => {
+        'id':        id,
+        'userId':    userId,
+        'title':     title,
+        'message':   message,
+        'type':      type,
+        'isRead':    isRead,
+        'createdAt': createdAt.toIso8601String(),
+      };
 }

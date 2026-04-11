@@ -142,26 +142,30 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (!_formKey.currentState!.validate()) return;
     context.read<AuthProvider>().clearError();
 
-    try {
-      await context.read<AuthProvider>().register(
-            _fullNameController.text.trim(),
-            _studentIdController.text.trim(),
-            _emailController.text.trim(),
-            _passwordController.text,
-            _plateController.text.trim().toUpperCase(),
-          );
-      // Phase 1: on success, backend returns a token — navigate to student home.
-    } on UnimplementedError {
-      // Phase 0 mock — show feedback and return to login.
-      if (!mounted) return;
+    final success = await context.read<AuthProvider>().register(
+      fullName:    _fullNameController.text.trim(),
+      studentId:   _studentIdController.text.trim(),
+      email:       _emailController.text.trim(),
+      password:    _passwordController.text,
+      plateNumber: _plateController.text.trim().toUpperCase(),
+    );
+
+    if (!mounted) return;
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created! Please log in.')),
+        SnackBar(
+          content: Text(
+            'Account created! Please log in.',
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+          ),
+          backgroundColor: AppColors.surfaceLight,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       context.go('/login');
-      return;
-    } catch (_) {
-      // Real errors surfaced via auth.error in Phase 1.
     }
+    // If not success: error is shown via context.watch<AuthProvider>().error
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
