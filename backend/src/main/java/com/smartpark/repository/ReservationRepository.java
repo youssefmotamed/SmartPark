@@ -5,6 +5,7 @@ import com.smartpark.model.Reservation;
 import com.smartpark.model.enums.ReservationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -30,6 +31,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     Optional<Reservation> findFirstByBadgeIdInAndStatusIn(List<Long> badgeIds, List<ReservationStatus> statuses);
 
     Page<Reservation> findByBadgeIdInAndStatusIn(List<Long> badgeIds, List<ReservationStatus> statuses, Pageable pageable);
+
+    List<Reservation> findByStatus(ReservationStatus status);
+
+    @Query("SELECT r FROM Reservation r JOIN FETCH r.spot WHERE r.status = :status")
+    List<Reservation> findByStatusWithSpot(@NotNull ReservationStatus status);
 
     @Query("SELECT r FROM Reservation r WHERE r.status = 'ACTIVE' AND r.expiresAt < :now")
     List<Reservation> findExpiredReservations(@Param("now") LocalDateTime now);
