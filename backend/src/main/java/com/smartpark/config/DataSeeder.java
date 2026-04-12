@@ -50,6 +50,7 @@ public class DataSeeder implements CommandLineRunner {
         seedZones();
         seedSpots();
         seedAdmin();
+        seedGuard();
         seedRewards();
     }
 
@@ -113,6 +114,25 @@ public class DataSeeder implements CommandLineRunner {
                 .updatedAt(now)
                 .build());
         log.info("Seeded admin account 'admin@smartpark.com'");
+    }
+
+    private void seedGuard() {
+        if (userRepository.findByEmail("guard@smartpark.com").isPresent()) {
+            log.info("Guard account already exists — skipping");
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        userRepository.save(User.builder()
+                .studentId("GUARD001")
+                .fullName("Test Guard")
+                .email("guard@smartpark.com")
+                .passwordHash(passwordEncoder.encode("Guard@2026"))
+                .role(UserRole.GUARD)
+                .isActive(true)
+                .createdAt(now)
+                .updatedAt(now)
+                .build());
+        log.info("Seeded guard account 'guard@smartpark.com'");
     }
 
     private void seedRewards() {
