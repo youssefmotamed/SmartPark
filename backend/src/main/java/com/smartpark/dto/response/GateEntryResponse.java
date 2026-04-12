@@ -34,6 +34,15 @@ public class GateEntryResponse {
     /** All plate numbers registered to this badge. Populated only when {@code valid=true}. */
     private List<String> registeredPlates;
 
+    /** ID of the reservation that was scanned. Populated only when {@code valid=true}. */
+    private Long reservationId;
+
+    /**
+     * Seconds remaining on the 15-minute pre-entry timer at the moment of scan.
+     * Populated only when {@code valid=true}.
+     */
+    private Long timeRemainingSeconds;
+
     /** Human-readable rejection reason. Null when {@code valid=true}. */
     private String reason;
 }

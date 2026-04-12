@@ -91,6 +91,23 @@ public class ReservationController {
     }
 
     /**
+     * Returns the QR code data string for the given reservation.
+     *
+     * <p>Verifies that the authenticated student is an accepted member of the badge that
+     * owns the reservation before returning the QR code data.</p>
+     *
+     * @param id the ID of the reservation
+     * @return 200 OK with the QR code data string
+     */
+    @GetMapping("/{id}/qr")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<String>> getQrCode(@PathVariable Long id) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        String qrCodeData = reservationService.getQrCode(id, userId);
+        return ResponseEntity.ok(ApiResponse.success(qrCodeData));
+    }
+
+    /**
      * Cancels an active reservation belonging to the authenticated student.
      *
      * <p>Verifies badge membership ownership and that the reservation is still in ACTIVE status

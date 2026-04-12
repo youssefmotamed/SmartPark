@@ -277,6 +277,31 @@ public class ReservationService {
     }
 
     /**
+     * Returns the QR code data string for the given reservation, verifying that the requesting
+     * user is an accepted member of the badge that owns the reservation.
+     *
+     * @param reservationId ID of the reservation whose QR code is requested
+     * @param userId        ID of the authenticated student making the request
+     * @return the raw QR code data string stored on the reservation
+     * @throws ResourceNotFoundException if no reservation exists with the given ID
+     * @throws BusinessRuleException     if the user is not an accepted member of the reservation's badge
+     */
+    @Transactional(readOnly = true)
+    public String getQrCode(Long reservationId, Long userId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Reservation with ID " + reservationId + " not found"));
+
+        Optional<BadgeMember> membership = badgeMemberRepository
+                .findByBadgeIdAndUserId(reservation.getBadge().getId(), userId);
+        if (membership.isEmpty() || membership.get().getStatus() != BadgeMemberStatus.ACCEPTED) {
+            throw new BusinessRuleException("ACCESS_DENIED", "This reservation does not belong to you");
+        }
+
+        return reservation.getQrCodeData();
+    }
+
+    /**
      * Returns true if the given coordinates are within {@code MAX_DISTANCE_KM} of campus
      * using the Haversine formula.
      */

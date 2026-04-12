@@ -27,4 +27,7 @@ public class GateExitResponse {
 
     /** Points awarded for this session. Always 0 until Phase 4 points calculation is implemented. */
     private int pointsEarned;
+
+    /** Whether the exit was successfully recorded (false when QR not found or reservation has wrong status). */
+    private boolean exitRecorded;
 }
