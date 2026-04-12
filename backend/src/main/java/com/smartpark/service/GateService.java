@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -74,6 +75,7 @@ public class GateService {
         }
 
         // 4. Transition to ENTERED
+        long timeRemainingSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), reservation.getExpiresAt());
         User guard = userRepository.getReferenceById(guardId);
         reservation.setStatus(ReservationStatus.ENTERED);
         reservation.setEntryScannedAt(LocalDateTime.now());
@@ -102,6 +104,8 @@ public class GateService {
                 .studentName(studentName)
                 .badgeType(badgeType)
                 .registeredPlates(plates)
+                .reservationId(reservation.getId())
+                .timeRemainingSeconds(timeRemainingSeconds)
                 .build();
     }
 
@@ -124,6 +128,7 @@ public class GateService {
                     .spotLabel(null)
                     .studentName(null)
                     .pointsEarned(0)
+                    .exitRecorded(false)
                     .build();
         }
 
@@ -140,6 +145,7 @@ public class GateService {
                     .spotLabel(spotLabel)
                     .studentName(studentName)
                     .pointsEarned(0)
+                    .exitRecorded(false)
                     .build();
         }
 
@@ -160,6 +166,7 @@ public class GateService {
                 .spotLabel(spotLabel)
                 .studentName(studentName)
                 .pointsEarned(0)
+                .exitRecorded(true)
                 .build();
     }
 }
