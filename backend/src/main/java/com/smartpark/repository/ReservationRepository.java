@@ -23,6 +23,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     Optional<Reservation> findBySpotIdAndStatusIn(Long spotId, List<ReservationStatus> statuses);
 
+    Optional<Reservation> findFirstByBadgeIdAndStatusInOrderByCreatedAtDesc(Long badgeId, List<ReservationStatus> statuses);
+
     @Query("SELECT r FROM Reservation r WHERE r.status = 'ACTIVE' AND r.expiresAt < :now")
     List<Reservation> findExpiredReservations(@Param("now") LocalDateTime now);
 }
