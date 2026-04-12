@@ -169,6 +169,45 @@ public class ReservationService {
     }
 
     /**
+     * Cancels an active reservation owned by the given user.
+     *
+     * @param reservationId ID of the reservation to cancel
+     * @param userId        ID of the authenticated student making the request
+     */
+    @Transactional
+    public void cancelReservation(Long reservationId, Long userId) {
+        // 1. Find reservation
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Reservation with ID " + reservationId + " not found"));
+
+        // 2. Verify ownership via badge membership
+        Optional<BadgeMember> membership = badgeMemberRepository
+                .findByBadgeIdAndUserId(reservation.getBadge().getId(), userId);
+        if (membership.isEmpty() || membership.get().getStatus() != BadgeMemberStatus.ACCEPTED) {
+            throw new BusinessRuleException("ACCESS_DENIED", "You do not own this reservation");
+        }
+
+        // 3. Check status is ACTIVE
+        if (reservation.getStatus() != ReservationStatus.ACTIVE) {
+            throw new BusinessRuleException("CANNOT_CANCEL",
+                    "Only active reservations can be cancelled. Current status: " + reservation.getStatus());
+        }
+
+        // 4. Cancel reservation
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        reservationRepository.save(reservation);
+
+        // 5. Free the spot
+        Spot spot = reservation.getSpot();
+        spot.setStatus(SpotStatus.AVAILABLE);
+        spot.setStatusUpdatedAt(LocalDateTime.now());
+        spotRepository.save(spot);
+
+        log.info("Reservation {} cancelled by user {}", reservationId, userId);
+    }
+
+    /**
      * Returns true if the given coordinates are within {@code MAX_DISTANCE_KM} of campus
      * using the Haversine formula.
      */
