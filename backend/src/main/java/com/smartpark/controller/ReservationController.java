@@ -8,14 +8,18 @@ import com.smartpark.security.SecurityUtils;
 import com.smartpark.service.ReservationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -45,6 +49,45 @@ public class ReservationController {
         Long userId = SecurityUtils.getCurrentUserId();
         ReservationResponse response = reservationService.createReservation(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
+
+    /**
+     * Returns the currently active or entered reservation for the authenticated student.
+     *
+     * <p>Searches across all badges the student is an accepted member of.
+     * Returns 404 if the student has no active or entered reservation.</p>
+     *
+     * @return 200 OK with the {@link ReservationResponse}, or 404 if none exists
+     */
+    @GetMapping("/active")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<ReservationResponse>> getActiveReservation() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        ReservationResponse response = reservationService.getActiveReservation(userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * Returns a paginated history of past reservations for the authenticated student.
+     *
+     * <p>Includes reservations with status COMPLETED, EXPIRED, or CANCELLED by default.
+     * An optional {@code status} query parameter narrows results to a single status.</p>
+     *
+     * @param status optional status filter (COMPLETED, EXPIRED, or CANCELLED)
+     * @param page   zero-based page index (default 0)
+     * @param size   page size, capped at 100 (default 20)
+     * @return 200 OK with a page of {@link ReservationResponse}
+     */
+    @GetMapping("/history")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<Page<ReservationResponse>>> getReservationHistory(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        size = Math.min(size, 100);
+        Long userId = SecurityUtils.getCurrentUserId();
+        Page<ReservationResponse> history = reservationService.getReservationHistory(userId, status, PageRequest.of(page, size));
+        return ResponseEntity.ok(ApiResponse.success(history));
     }
 
     /**

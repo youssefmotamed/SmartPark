@@ -27,6 +27,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -205,6 +208,72 @@ public class ReservationService {
         spotRepository.save(spot);
 
         log.info("Reservation {} cancelled by user {}", reservationId, userId);
+    }
+
+    /**
+     * Returns the active or entered reservation for the given user across all their badges.
+     *
+     * @param userId ID of the authenticated student
+     * @return the active {@link ReservationResponse}
+     * @throws ResourceNotFoundException if the user has no accepted badges or no active reservation
+     */
+    @Transactional(readOnly = true)
+    public ReservationResponse getActiveReservation(Long userId) {
+        List<Long> badgeIds = badgeMemberRepository.findByUserId(userId).stream()
+                .filter(m -> m.getStatus() == BadgeMemberStatus.ACCEPTED)
+                .map(m -> m.getBadge().getId())
+                .toList();
+
+        if (badgeIds.isEmpty()) {
+            throw new ResourceNotFoundException("No active reservation found");
+        }
+
+        Reservation reservation = reservationRepository
+                .findFirstByBadgeIdInAndStatusIn(
+                        badgeIds, List.of(ReservationStatus.ACTIVE, ReservationStatus.ENTERED))
+                .orElseThrow(() -> new ResourceNotFoundException("No active reservation found"));
+
+        return ReservationResponse.fromEntity(reservation);
+    }
+
+    /**
+     * Returns a paginated history of past reservations for the given user across all their badges.
+     *
+     * @param userId       ID of the authenticated student
+     * @param statusFilter optional status to filter by (COMPLETED, EXPIRED, or CANCELLED);
+     *                     defaults to all three when null or blank
+     * @param pageable     pagination parameters
+     * @return page of {@link ReservationResponse} ordered by most recent first
+     * @throws BusinessRuleException if an unrecognised status string is supplied
+     */
+    @Transactional(readOnly = true)
+    public Page<ReservationResponse> getReservationHistory(Long userId, String statusFilter, Pageable pageable) {
+        List<Long> badgeIds = badgeMemberRepository.findByUserId(userId).stream()
+                .filter(m -> m.getStatus() == BadgeMemberStatus.ACCEPTED)
+                .map(m -> m.getBadge().getId())
+                .toList();
+
+        List<ReservationStatus> statuses;
+        if (statusFilter == null || statusFilter.isBlank()) {
+            statuses = List.of(
+                    ReservationStatus.COMPLETED,
+                    ReservationStatus.EXPIRED,
+                    ReservationStatus.CANCELLED);
+        } else {
+            try {
+                statuses = List.of(ReservationStatus.valueOf(statusFilter.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new BusinessRuleException("INVALID_STATUS", "Invalid status filter: " + statusFilter);
+            }
+        }
+
+        if (badgeIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        return reservationRepository
+                .findByBadgeIdInAndStatusIn(badgeIds, statuses, pageable)
+                .map(ReservationResponse::fromEntity);
     }
 
     /**
