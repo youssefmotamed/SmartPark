@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 import '../models/user.dart';
+import '../services/auth_service.dart';
+import '../services/base_api_service.dart';
 
 /// Manages authentication state across the app.
 ///
@@ -48,9 +50,39 @@ class AuthProvider extends ChangeNotifier {
 
   /// Authenticates the user with [email] and [password].
   ///
-  /// Implemented in Phase 1.
+  /// Stores the JWT tokens and user info in SharedPreferences on success.
+  /// Sets [error] on failure.
   Future<void> login(String email, String password) async {
-    throw UnimplementedError('login() will be implemented in Phase 1');
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final result = await AuthService().login(email, password);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(ApiConfig.tokenKey,        result.accessToken);
+      await prefs.setString(ApiConfig.refreshTokenKey, result.refreshToken);
+      await prefs.setString(ApiConfig.userRoleKey,     result.role);
+      await prefs.setString(ApiConfig.userIdKey,       result.userId.toString());
+      debugPrint('Token saved: ${result.accessToken.substring(0, 20)}...');
+      debugPrint('Role saved: ${result.role}');
+      _currentUser = User(
+        id:          result.userId,
+        fullName:    result.fullName,
+        email:       email,
+        studentId:   '',
+        plateNumber: '',
+        role:        result.role,
+        isActive:    true,
+        createdAt:   DateTime.now(),
+      );
+    } on ApiException catch (e) {
+      _error = e.message;
+    } catch (_) {
+      _error = 'Connection error. Please try again.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   /// Registers a new student account.

@@ -1,5 +1,6 @@
 // base_api_service.dart — HTTP base class with JWT injection, error handling, and token cleanup
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
@@ -38,6 +39,7 @@ class BaseApiService {
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(ApiConfig.tokenKey);
+    debugPrint('Token being sent: ${token?.substring(0, 20) ?? 'NULL'}');
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',

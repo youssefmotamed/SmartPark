@@ -10,6 +10,7 @@ import 'providers/spots_provider.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/student/active_reservation_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'screens/guard/guard_shell.dart';
 import 'screens/admin/admin_shell.dart';
@@ -65,6 +66,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/student/home',
       builder: (_, _) => const StudentShell(),
+    ),
+    GoRoute(
+      path: '/student/reservation',
+      builder: (_, _) => const ActiveReservationScreen(),
     ),
 
     // ── Guard shell ──────────────────────────────────────────────────────────

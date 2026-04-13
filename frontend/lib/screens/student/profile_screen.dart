@@ -419,21 +419,30 @@ class _TappableCardState extends State<_TappableCard> {
       child: AnimatedScale(
         scale: _pressed ? 0.98 : 1.0,
         duration: const Duration(milliseconds: 100),
-        child: Container(
+        child: DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.surfaceLight,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            border: Border(
-              top:    const BorderSide(color: AppColors.divider),
-              right:  const BorderSide(color: AppColors.divider),
-              bottom: const BorderSide(color: AppColors.divider),
-              left: widget.accentLeft != null
-                  ? BorderSide(color: widget.accentLeft!, width: 4)
-                  : const BorderSide(color: AppColors.divider),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius - 1),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (widget.accentLeft != null)
+                    Container(width: 4, color: widget.accentLeft),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+                      child: widget.child,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          padding: const EdgeInsets.all(AppSpacing.cardPadding),
-          child: widget.child,
         ),
       ),
     );

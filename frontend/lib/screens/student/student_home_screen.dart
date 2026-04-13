@@ -10,6 +10,7 @@ import '../../config/constants.dart';
 import '../../models/spot.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/spots_provider.dart';
+import '../../widgets/spot_detail_sheet.dart';
 import '../../widgets/spot_tile.dart';
 
 /// The main student parking map screen.
@@ -88,16 +89,31 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
   // ── Spot tap ─────────────────────────────────────────────────────────────────
 
   void _onSpotTapped(Spot spot) {
-    context.read<SpotsProvider>().selectSpot(spot);
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.bottomSheetRadius),
+    if (spot.status != 'AVAILABLE') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Spot ${spot.spotLabel} is currently ${spot.status.toLowerCase()}',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textPrimary,
+            ),
+          ),
+          backgroundColor: AppColors.surfaceLight,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadiusSmall),
+          ),
         ),
-      ),
-      builder: (_) => _SpotDetailSheet(
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => SpotDetailSheet(
         spot: spot,
         isTooFar: context.read<SpotsProvider>().isTooFar,
       ),
@@ -518,148 +534,3 @@ class _PollingDotState extends State<_PollingDot>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Spot detail bottom sheet
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SpotDetailSheet extends StatelessWidget {
-  final Spot spot;
-  final bool isTooFar;
-
-  const _SpotDetailSheet({required this.spot, required this.isTooFar});
-
-  String _accessDesc(String zoneCode) {
-    switch (zoneCode) {
-      case 'B': return 'Carpool badges only';
-      case 'C': return 'Security managed';
-      default:  return 'All badges welcome';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color      = spot.statusColor;
-    final canReserve = spot.isAvailable && !isTooFar;
-    final statusLabel = spot.status[0] + spot.status.substring(1).toLowerCase();
-
-    String? disabledReason;
-    if (isTooFar) {
-      disabledReason = 'Move closer to campus to reserve';
-    } else if (!spot.isAvailable) {
-      disabledReason = 'This spot is currently ${spot.status.toLowerCase()}';
-    }
-
-    return Padding(
-      padding: EdgeInsets.only(
-        left: AppSpacing.lg,
-        right: AppSpacing.lg,
-        top: AppSpacing.md,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceHighlight,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          Text('Spot ${spot.spotLabel}', style: AppTypography.displayMedium),
-          const SizedBox(height: 4),
-          Text(spot.zoneName, style: AppTypography.bodyMedium),
-          const SizedBox(height: 16),
-
-          // Status pill
-          Row(
-            children: [
-              Container(
-                height: AppSpacing.badgeHeight,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: color.withAlpha(38),
-                  borderRadius: BorderRadius.circular(AppSpacing.badgeRadius),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8, height: 8,
-                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      statusLabel,
-                      style: AppTypography.labelSmall.copyWith(color: color),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Access info
-          Row(
-            children: [
-              const Icon(LucideIcons.info, size: 16, color: AppColors.textTertiary),
-              const SizedBox(width: 8),
-              Text(_accessDesc(spot.zoneCode), style: AppTypography.bodyMedium),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Reserve button
-          Opacity(
-            opacity: canReserve ? 1.0 : 0.35,
-            child: SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: canReserve
-                    ? () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Reservations coming in Phase 2')),
-                        );
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.background,
-                  disabledBackgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
-                  ),
-                ),
-                child: Text(
-                  isTooFar
-                      ? 'TOO FAR TO RESERVE'
-                      : spot.isAvailable
-                          ? 'RESERVE THIS SPOT'
-                          : 'SPOT NOT AVAILABLE',
-                  style: AppTypography.labelLarge.copyWith(
-                    color: AppColors.background,
-                    fontSize: 14,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          if (disabledReason != null) ...[
-            const SizedBox(height: 8),
-            Text(disabledReason, style: AppTypography.bodySmall, textAlign: TextAlign.center),
-          ],
-        ],
-      ),
-    );
-  }
-}
