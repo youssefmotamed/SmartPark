@@ -190,10 +190,14 @@ class _ProfileScreenState extends State<ProfileScreen>
 
             // ── 4 · Badge card ─────────────────────────────────────────────
             _animated(_buildBadgeCard(p.activeBadge), delayMs: 240),
+            const SizedBox(height: AppSpacing.sm + 4),
+
+            // ── 5 · History button ─────────────────────────────────────────
+            _animated(_buildHistoryButton(context), delayMs: 320),
             const SizedBox(height: AppSpacing.xl),
 
-            // ── 5 · Logout button ──────────────────────────────────────────
-            _animated(_buildLogoutButton(context), delayMs: 320),
+            // ── 6 · Logout button ──────────────────────────────────────────
+            _animated(_buildLogoutButton(context), delayMs: 400),
             const SizedBox(height: AppSpacing.lg),
           ],
         ),
@@ -364,6 +368,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ],
             ),
+          ),
+          const Icon(LucideIcons.chevronRight, size: 20, color: AppColors.textTertiary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryButton(BuildContext context) {
+    return _TappableCard(
+      onTap: () => context.go('/student/history'),
+      child: Row(
+        children: [
+          const Icon(LucideIcons.history, size: 18, color: AppColors.textTertiary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text('Reservation History', style: AppTypography.labelMedium),
           ),
           const Icon(LucideIcons.chevronRight, size: 20, color: AppColors.textTertiary),
         ],

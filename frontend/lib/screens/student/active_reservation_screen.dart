@@ -220,6 +220,21 @@ class _ActiveReservationScreenState extends State<ActiveReservationScreen>
           'Spot ${reservation.spotLabel} — $zoneName',
           style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
         ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => context.go('/student/history'),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(LucideIcons.history, size: 14, color: AppColors.primary),
+              const SizedBox(width: 4),
+              Text(
+                'View history',
+                style: AppTypography.bodySmall.copyWith(color: AppColors.primary),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -467,23 +482,7 @@ class _ActiveReservationScreenState extends State<ActiveReservationScreen>
               final success =
                   await context.read<ReservationProvider>().cancelReservation();
               if (success && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Reservation cancelled',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    backgroundColor: AppColors.surfaceLight,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.cardRadiusSmall),
-                    ),
-                  ),
-                );
-                context.go('/student/home');
+                context.go('/student/reservation/cancelled');
               }
             },
             child: Text(

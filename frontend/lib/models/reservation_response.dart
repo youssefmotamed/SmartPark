@@ -35,13 +35,13 @@ class ReservationResponse {
       spotLabel:         json['spotLabel'] as String,
       zoneCode:          json['zoneCode'] as String,
       status:            json['status'] as String,
-      qrCodeData:        json['qrCodeData'] as String,
+      qrCodeData:        json['qrCodeData'] as String? ?? '',
       reservedAt:        DateTime.parse(json['reservedAt'] as String),
       expiresAt:         json['expiresAt'] != null
                              ? DateTime.parse(json['expiresAt'] as String)
                              : null,
       expectedLeaveTime: DateTime.parse(json['expectedLeaveTime'] as String),
-      badgeType:         json['badgeType'] as String,
+      badgeType:         json['badgeType'] as String? ?? 'INDIVIDUAL',
     );
   }
 

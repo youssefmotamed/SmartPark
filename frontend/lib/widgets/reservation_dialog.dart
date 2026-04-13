@@ -11,6 +11,7 @@ import '../../config/app_spacing.dart';
 import '../../models/spot.dart';
 import '../../models/create_reservation_request.dart';
 import '../../providers/reservation_provider.dart';
+import 'error_dialog.dart';
 
 /// Bottom sheet that collects leave time and confirms a reservation.
 ///
@@ -180,18 +181,10 @@ class _ReservationDialogState extends State<ReservationDialog> {
     } else {
       final error = context.read<ReservationProvider>().createError
           ?? 'Failed to create reservation';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error,
-            style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
-          ),
-          backgroundColor: AppColors.error.withValues(alpha: 0.9),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.cardRadiusSmall),
-          ),
-        ),
+      showErrorDialog(
+        context,
+        title: 'Reservation Failed',
+        message: error,
       );
     }
   }

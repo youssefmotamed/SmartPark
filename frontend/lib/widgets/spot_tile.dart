@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../models/spot.dart';
 import '../config/app_spacing.dart';
+import 'error_dialog.dart';
 
 /// A single parking spot on the map.
 ///
@@ -65,14 +66,18 @@ class _SpotTileState extends State<SpotTile>
 
   void _handleTap(BuildContext context) {
     if (widget.isGuardOnly) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Managed by security'), duration: Duration(seconds: 2)),
+      showErrorDialog(
+        context,
+        title: 'Security Only',
+        message: 'Zone C spots are managed by security guards and cannot be reserved by students.',
       );
       return;
     }
     if (widget.isMuted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Carpool badge required'), duration: Duration(seconds: 2)),
+      showErrorDialog(
+        context,
+        title: 'Carpool Badge Required',
+        message: 'Zone B is reserved for carpool badges only. Create or join a carpool badge to reserve spots here.',
       );
       return;
     }

@@ -1,14 +1,17 @@
 // student_home_screen.dart — Live parking map with spot polling and geolocation gating
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_spacing.dart';
 import '../../config/app_typography.dart';
 import '../../config/constants.dart';
+import '../../models/reservation_response.dart';
 import '../../models/spot.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/reservation_provider.dart';
 import '../../providers/spots_provider.dart';
 import '../../widgets/spot_detail_sheet.dart';
 import '../../widgets/spot_tile.dart';
@@ -43,6 +46,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SpotsProvider>().startPolling();
+      context.read<ReservationProvider>().fetchActiveReservation();
       _checkGeolocation();
     });
   }
@@ -89,6 +93,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
   // ── Spot tap ─────────────────────────────────────────────────────────────────
 
   void _onSpotTapped(Spot spot) {
+    // If the spot is reserved and the user has an active reservation on it,
+    // navigate directly to the reservation screen to show the QR code.
+    if (spot.status == 'RESERVED') {
+      final activeRes = context.read<ReservationProvider>().activeReservation;
+      if (activeRes != null && activeRes.spotLabel == spot.spotLabel) {
+        context.go('/student/reservation');
+        return;
+      }
+    }
+
     if (spot.status != 'AVAILABLE') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -138,7 +152,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final spots = context.watch<SpotsProvider>();
+    final spots       = context.watch<SpotsProvider>();
+    final reservation = context.watch<ReservationProvider>().activeReservation;
     context.watch<AuthProvider>();
 
     final zoneASpots = spots.spotsForZone('A');
@@ -191,6 +206,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
               child: spots.isTooFar ? _buildGeoBanner() : const SizedBox.shrink(),
             ),
           ),
+
+          // ── Active reservation banner ─────────────────────────────────────
+          if (reservation != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
+              ),
+              child: _buildActiveReservationBanner(reservation),
+            ),
 
           const Spacer(),
 
@@ -410,6 +434,64 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
             style: AppTypography.bodySmall.copyWith(color: AppColors.warning),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Active reservation banner ─────────────────────────────────────────────────
+
+  Widget _buildActiveReservationBanner(ReservationResponse reservation) {
+    final isEntered = reservation.isEntered;
+    final label     = isEntered ? 'Entered — Park in your spot' : 'Active — Get to the gate!';
+    final color     = AppColors.success;
+
+    return GestureDetector(
+      onTap: () => context.go('/student/reservation'),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusSmall),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusSmall - 1),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(width: 4, color: color),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.qrCode, size: 16, color: color),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Spot ${reservation.spotLabel}',
+                                style: AppTypography.labelMedium.copyWith(color: color),
+                              ),
+                              Text(
+                                label,
+                                style: AppTypography.bodySmall.copyWith(color: color),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(LucideIcons.chevronRight, size: 16, color: color),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
