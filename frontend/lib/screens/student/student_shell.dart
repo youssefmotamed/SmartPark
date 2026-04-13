@@ -2,9 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
+import '../../providers/auth_provider.dart';
 import 'student_home_screen.dart';
 import 'profile_screen.dart';
 
@@ -75,13 +77,20 @@ class _StudentShellState extends State<StudentShell>
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final initial = (user?.fullName.isNotEmpty ?? false)
+        ? user!.fullName[0].toUpperCase()
+        : '?';
+    final points = user?.totalPoints ?? 0;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
         children: [
           _TopBar(
             accent: _accent,
-            points: 85, // TODO: replace with live value from PointsProvider in Phase 3
+            initial: initial,
+            points: points,
             onBellTap: () => debugPrint('[StudentShell] notifications tapped'),
             onAvatarTap: () => _onTabTapped(3),
           ),
@@ -113,12 +122,14 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onBellTap;
   final VoidCallback onAvatarTap;
   final int points;
+  final String initial;
 
   const _TopBar({
     required this.accent,
     required this.onBellTap,
     required this.onAvatarTap,
     required this.points,
+    required this.initial,
   });
 
   @override
@@ -218,7 +229,7 @@ class _TopBar extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  'W',
+                  initial,
                   style: AppTypography.labelMedium.copyWith(color: accent),
                 ),
               ),

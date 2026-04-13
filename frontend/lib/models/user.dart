@@ -25,6 +25,9 @@ class User {
   /// Whether the account is active.
   final bool isActive;
 
+  /// Total points balance (students only; 0 for guards/admins).
+  final int totalPoints;
+
   /// Account creation timestamp.
   final DateTime createdAt;
 
@@ -37,6 +40,7 @@ class User {
     required this.plateNumber,
     required this.role,
     required this.isActive,
+    required this.totalPoints,
     required this.createdAt,
   });
 
@@ -49,6 +53,7 @@ class User {
         plateNumber: json['plateNumber'] ?? '',
         role:        json['role'],
         isActive:    json['isActive']    ?? true,
+        totalPoints: json['totalPoints'] ?? 0,
         createdAt:   DateTime.parse(json['createdAt'] as String),
       );
 
@@ -60,6 +65,7 @@ class User {
         'plateNumber': plateNumber,
         'role':        role,
         'isActive':    isActive,
+        'totalPoints': totalPoints,
         'createdAt':   createdAt.toIso8601String(),
       };
 }

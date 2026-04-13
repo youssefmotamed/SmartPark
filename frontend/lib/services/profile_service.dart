@@ -70,6 +70,7 @@ class ProfileResponse {
         plateNumber: plateNumber,
         role:        'STUDENT',
         isActive:    true,
+        totalPoints: totalPoints,
         createdAt:   createdAt,
       );
 }

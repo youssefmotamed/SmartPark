@@ -154,6 +154,7 @@ class AuthProvider extends ChangeNotifier {
           plateNumber: '',
           role:        authResponse.user.role,
           isActive:    true,
+          totalPoints: 0,
           createdAt:   DateTime.now(),
         );
       }
