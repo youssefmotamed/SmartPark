@@ -22,10 +22,10 @@ public class CreateReservationRequest {
     @Future(message = "Expected leave time must be in the future")
     private LocalDateTime expectedLeaveTime;
 
-    @NotNull(message = "Latitude is required")
+    // Nullable — geolocation is not always available (GPS off, indoor, emulator).
+    // The service treats a null position the same as being too far.
     private Double latitude;
 
-    @NotNull(message = "Longitude is required")
     private Double longitude;
 
     public Long getSpotId() { return spotId; }

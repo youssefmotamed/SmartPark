@@ -125,7 +125,7 @@ public class ReservationService {
             throw new BusinessRuleException("ZONE_ACCESS_DENIED", "Zone C is for guest parking only");
         }
 
-        // 7. Geolocation check
+        // 7. Geolocation check (null lat/lng treated same as too-far)
         if (!skipGeolocation && !isWithinCampus(request.getLatitude(), request.getLongitude())) {
             log.warn("User {} is too far from campus to reserve (lat={}, lng={})",
                     userId, request.getLatitude(), request.getLongitude());
@@ -303,9 +303,10 @@ public class ReservationService {
 
     /**
      * Returns true if the given coordinates are within {@code MAX_DISTANCE_KM} of campus
-     * using the Haversine formula.
+     * using the Haversine formula. Returns false if either coordinate is null.
      */
-    private boolean isWithinCampus(double userLat, double userLng) {
+    private boolean isWithinCampus(Double userLat, Double userLng) {
+        if (userLat == null || userLng == null) return false;
         double dLat = Math.toRadians(CAMPUS_LAT - userLat);
         double dLng = Math.toRadians(CAMPUS_LNG - userLng);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
