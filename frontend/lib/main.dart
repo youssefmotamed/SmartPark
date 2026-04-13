@@ -4,10 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/guard_provider.dart';
+import 'providers/reservation_provider.dart';
 import 'providers/spots_provider.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/student/active_reservation_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'screens/guard/guard_shell.dart';
 import 'screens/admin/admin_shell.dart';
@@ -26,6 +29,8 @@ class SmartParkApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SpotsProvider()),
+        ChangeNotifierProvider(create: (_) => ReservationProvider()),
+        ChangeNotifierProvider(create: (_) => GuardProvider()),
       ],
       child: MaterialApp.router(
         title: 'SmartPark',
@@ -61,6 +66,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/student/home',
       builder: (_, _) => const StudentShell(),
+    ),
+    GoRoute(
+      path: '/student/reservation',
+      builder: (_, _) => const ActiveReservationScreen(),
     ),
 
     // ── Guard shell ──────────────────────────────────────────────────────────

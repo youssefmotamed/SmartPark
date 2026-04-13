@@ -20,6 +20,8 @@ class ActiveBadgeInfo {
         type:   json['type'],
         status: json['status'],
       );
+
+  bool get isActive => status == 'ACTIVE';
 }
 
 /// Full response from GET /api/v1/profile.
