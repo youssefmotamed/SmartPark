@@ -87,25 +87,18 @@ public class CameraService {
                                 List.of(ReservationStatus.ACTIVE, ReservationStatus.ENTERED))
                         .isPresent();
 
-                if (hasReservation) {
-                    // Legitimate occupancy: promote RESERVED → OCCUPIED if needed
-                    if (spot.getStatus() == SpotStatus.RESERVED || spot.getStatus() == SpotStatus.OCCUPIED) {
-                        spot.setStatus(SpotStatus.OCCUPIED);
-                        spot.setStatusUpdatedAt(LocalDateTime.now());
-                        spotRepository.save(spot);
-                        spotsUpdated++;
-                    }
-                } else {
-                    // No reservation — determine whether this is a new contradiction
-                    if (spot.getStatus() == SpotStatus.AVAILABLE) {
-                        // Fresh contradiction: spot was available but now has an unregistered car
-                        int sentCount = notifyAllGuards(label);
-                        contradictionsDetected++;
-                        notificationsSent += sentCount;
-                    }
-                    // If spot is already OCCUPIED with no reservation, contradiction was already
-                    // reported in a prior cycle — do nothing to avoid duplicate alerts.
+                // If no reservation and spot was AVAILABLE, this is a new unauthorized car — alert guards
+                if (!hasReservation && spot.getStatus() == SpotStatus.AVAILABLE) {
+                    int sentCount = notifyAllGuards(label);
+                    contradictionsDetected++;
+                    notificationsSent += sentCount;
                 }
+
+                // Always mark the spot OCCUPIED when camera sees a car
+                spot.setStatus(SpotStatus.OCCUPIED);
+                spot.setStatusUpdatedAt(LocalDateTime.now());
+                spotRepository.save(spot);
+                spotsUpdated++;
 
             } else {
                 // --- Spot appears empty ---

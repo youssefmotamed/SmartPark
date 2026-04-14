@@ -298,7 +298,7 @@ def main():
             now = time.time()
             if now - last_send_time >= CAPTURE_INTERVAL:
                 spots_data = [
-                    {"spot_label": name, "is_occupied": occupied}
+                    {"spot_label": name, "is_occupied": bool(occupied)}
                     for name, occupied in occupancy.items()
                 ]
                 send_spot_status(spots_data)
