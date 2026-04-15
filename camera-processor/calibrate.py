@@ -14,6 +14,7 @@ Calibration mode controls:
 
 Test mode controls:
     +/-  — adjust pixel sensitivity (lower threshold = more sensitive)
+    c    — go back to calibration mode and redefine all spots from scratch
     s    — save config and quit
     q    — quit without saving
 """
@@ -241,7 +242,8 @@ def run_test_mode(cap, config):
                 read and may be updated before returning.
 
     Returns:
-        True if the user pressed 's' to save, False if they pressed 'q'.
+        True if the user pressed 's' to save, False if they pressed 'q',
+        or the string "recalibrate" if the user pressed 'c'.
     """
     spots = config["spots"]
     pixel_threshold = config["pixel_threshold"]
@@ -264,7 +266,7 @@ def run_test_mode(cap, config):
     ref_gray = cv2.cvtColor(ref_frame, cv2.COLOR_BGR2GRAY)
     print(f"[calibrate] Reference captured.")
     print(f"  pixel_threshold={pixel_threshold}  area_threshold={area_threshold:.0%}")
-    print("  Controls: [+/-] sensitivity  [s] save+quit  [q] quit\n")
+    print("  Controls: [+/-] sensitivity  [c] recalibrate  [s] save+quit  [q] quit\n")
 
     while True:
         ret, frame = cap.read()
@@ -286,7 +288,7 @@ def run_test_mode(cap, config):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         hud = (f"px_thresh={pixel_threshold}  area={area_threshold:.0%}  "
-               f"[+/-] sensitivity  [s] save  [q] quit")
+               f"[+/-] sensitivity  [c] recalibrate  [s] save  [q] quit")
         cv2.putText(display, hud, (10, display.shape[0] - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
 
@@ -301,6 +303,10 @@ def run_test_mode(cap, config):
             pixel_threshold = min(100, pixel_threshold + 5)
             config["pixel_threshold"] = pixel_threshold
             print(f"[calibrate] pixel_threshold → {pixel_threshold} (less sensitive)")
+        elif key == ord("c"):
+            print("[calibrate] Returning to calibration mode — all spots will be redefined.")
+            cv2.destroyAllWindows()
+            return "recalibrate"
         elif key == ord("s"):
             print("[calibrate] Saving config and quitting.")
             cv2.destroyAllWindows()
@@ -320,26 +326,43 @@ def main():
 
     If spots_config.json already exists the tool jumps straight to test
     mode so the user can verify or retune without redefining every spot.
+    Pressing 'c' in test mode drops back into calibration mode and clears
+    all previously defined spots, so the user never needs to manually
+    delete spots_config.json to start over.
     """
     config, already_configured = load_config()
 
     cap = open_camera(config["camera_index"], config["resolution"])
 
     try:
-        if already_configured:
-            print("[calibrate] Existing config found — skipping to test mode.")
-            should_save = run_test_mode(cap, config)
-        else:
-            spots, proceed = run_calibration_mode(cap, config)
-            config["spots"] = spots
+        # Start in test mode when a config already exists; otherwise calibrate.
+        go_to_test = already_configured
 
-            if not proceed:
-                return
+        while True:
+            if go_to_test:
+                if already_configured:
+                    print("[calibrate] Existing config found — skipping to test mode.")
+                result = run_test_mode(cap, config)
+                if result == "recalibrate":
+                    # Clear all spots and fall through to calibration mode.
+                    config["spots"] = {}
+                    go_to_test = False
+                    already_configured = False  # suppress "existing config" banner
+                    continue
+                should_save = result
+            else:
+                spots, proceed = run_calibration_mode(cap, config)
+                config["spots"] = spots
 
-            should_save = run_test_mode(cap, config)
+                if not proceed:
+                    return
 
-        if should_save:
-            save_config(config)
+                go_to_test = True
+                continue
+
+            if should_save:
+                save_config(config)
+            return
 
     finally:
         cap.release()
