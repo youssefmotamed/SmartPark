@@ -1,6 +1,7 @@
 // REST controller for student reservation endpoints.
 package com.smartpark.controller;
 
+import com.smartpark.dto.request.AdvanceReservationRequest;
 import com.smartpark.dto.request.CreateReservationRequest;
 import com.smartpark.dto.response.ApiResponse;
 import com.smartpark.dto.response.ReservationResponse;
@@ -48,6 +49,25 @@ public class ReservationController {
             @Valid @RequestBody CreateReservationRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
         ReservationResponse response = reservationService.createReservation(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
+
+    /**
+     * Creates an advance reservation using a redeemed advance-reservation token.
+     *
+     * <p>Skips the geolocation gate. All other validations (badge ownership, suspension,
+     * spot availability, zone access, same-spot restriction) still apply.
+     * The consumed token is marked used on success.</p>
+     *
+     * @param request validated request body with spotId, badgeId, and expectedLeaveTime
+     * @return 201 Created with the new {@link ReservationResponse}
+     */
+    @PostMapping("/advance")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<ReservationResponse>> createAdvanceReservation(
+            @Valid @RequestBody AdvanceReservationRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        ReservationResponse response = reservationService.createAdvanceReservation(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 

@@ -32,4 +32,8 @@ public class RewardRedemption {
 
     @Column(name = "redeemed_at", nullable = false)
     private LocalDateTime redeemedAt;
+
+    /** Whether this advance-reservation token has already been consumed. */
+    @Column(name = "is_used", nullable = false)
+    private boolean used = false;
 }
