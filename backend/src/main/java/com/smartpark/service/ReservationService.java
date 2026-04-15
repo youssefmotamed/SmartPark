@@ -14,6 +14,7 @@ import com.smartpark.model.enums.BadgeStatus;
 import com.smartpark.model.enums.BadgeType;
 import com.smartpark.model.enums.ReservationStatus;
 import com.smartpark.model.enums.SpotStatus;
+import com.smartpark.model.enums.NotificationType;
 import com.smartpark.model.enums.ZoneAccessType;
 import com.smartpark.repository.BadgeMemberRepository;
 import com.smartpark.repository.BadgeRepository;
@@ -57,9 +58,12 @@ public class ReservationService {
     private final SpotRepository spotRepository;
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * Creates a new parking reservation after running all validation checks in order.
+     * On success, sends a {@link NotificationType#RESERVATION_CONFIRMED} notification
+     * to every accepted member of the badge.
      *
      * @param userId  ID of the authenticated student making the request
      * @param request validated request body carrying spotId, badgeId, location, and expected leave time
@@ -164,6 +168,19 @@ public class ReservationService {
         spot.setStatus(SpotStatus.RESERVED);
         spot.setStatusUpdatedAt(LocalDateTime.now());
         spotRepository.save(spot);
+
+        // Send RESERVATION_CONFIRMED notification to all accepted badge members
+        List<BadgeMember> members = badgeMemberRepository.findByBadgeIdAndStatus(
+                badge.getId(), BadgeMemberStatus.ACCEPTED);
+        for (BadgeMember member : members) {
+            notificationService.createNotificationForUser(
+                    member.getUser(),
+                    NotificationType.RESERVATION_CONFIRMED,
+                    "Reservation confirmed",
+                    "Your reservation for spot " + spot.getSpotLabel()
+                            + " is confirmed. You have 15 minutes to arrive."
+            );
+        }
 
         log.info("Reservation created: id={}, spot={}, badge={}, user={}",
                 reservation.getId(), spot.getSpotLabel(), badge.getId(), userId);
