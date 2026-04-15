@@ -15,6 +15,8 @@ import 'screens/student/reservation_cancelled_screen.dart';
 import 'screens/student/reservation_history_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'screens/guard/guard_shell.dart';
+import 'screens/guard/qr_scanner_screen.dart';
+import 'screens/guard/scan_result_screen.dart';
 import 'screens/admin/admin_shell.dart';
 
 void main() {
@@ -83,11 +85,17 @@ final GoRouter _router = GoRouter(
     ),
 
     // ── Guard shell ──────────────────────────────────────────────────────────
-    // GuardShell manages its own 4-tab IndexedStack internally.
-    // Guard sub-routes (scanner, guest parking, violations) added in Phase 2.
     GoRoute(
       path: '/guard/home',
       builder: (_, _) => const GuardShell(),
+    ),
+    GoRoute(
+      path: '/guard/scanner',
+      builder: (_, _) => const QRScannerScreen(),
+    ),
+    GoRoute(
+      path: '/guard/result',
+      builder: (_, _) => const ScanResultScreen(),
     ),
 
     // ── Admin shell ──────────────────────────────────────────────────────────

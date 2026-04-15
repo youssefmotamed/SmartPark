@@ -1,11 +1,14 @@
 // guard_shell.dart — Guard role persistent shell: top bar + 4-tab bottom nav
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
-import 'guard_home_placeholder.dart';
+import '../../providers/auth_provider.dart';
+import 'guard_home_screen.dart';
 
 /// Persistent layout wrapper for all guard screens.
 ///
@@ -33,7 +36,7 @@ class _GuardShellState extends State<GuardShell>
   ];
 
   static const _screens = [
-    GuardHomePlaceholder(),
+    GuardHomeScreen(),
     _TabPlaceholder(title: 'Active Reservations', icon: LucideIcons.clock,         note: 'Coming in Phase 2'),
     _TabPlaceholder(title: 'Guest Parking',       icon: LucideIcons.userPlus,      note: 'Coming in Phase 2'),
     _TabPlaceholder(title: 'Violations',          icon: LucideIcons.alertTriangle, note: 'Coming in Phase 2'),
@@ -181,6 +184,23 @@ class _TopBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(LucideIcons.bell, size: 20, color: AppColors.textSecondary),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Logout
+          GestureDetector(
+            onTap: () async {
+              await context.read<AuthProvider>().logout();
+              if (context.mounted) context.go('/login');
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(LucideIcons.logOut, size: 18, color: AppColors.error),
             ),
           ),
         ],
