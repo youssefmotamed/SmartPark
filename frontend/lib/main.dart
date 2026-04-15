@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/guard_provider.dart';
+import 'providers/notification_provider.dart';
 import 'providers/reservation_provider.dart';
 import 'providers/spots_provider.dart';
 import 'screens/auth/splash_screen.dart';
@@ -35,6 +36,7 @@ class SmartParkApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SpotsProvider()),
         ChangeNotifierProvider(create: (_) => ReservationProvider()),
         ChangeNotifierProvider(create: (_) => GuardProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp.router(
         title: 'SmartPark',

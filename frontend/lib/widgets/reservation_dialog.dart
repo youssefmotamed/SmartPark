@@ -1,7 +1,6 @@
 // reservation_dialog.dart — S06: Reservation confirmation dialog with leave time picker
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -36,24 +35,11 @@ class ReservationDialog extends StatefulWidget {
 class _ReservationDialogState extends State<ReservationDialog> {
   late DateTime _expectedLeaveTime;
   bool          _isSubmitting = false;
-  Position?     _position;
 
   @override
   void initState() {
     super.initState();
     _expectedLeaveTime = DateTime.now().add(const Duration(hours: 2));
-    _fetchPosition();
-  }
-
-  Future<void> _fetchPosition() async {
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-      );
-      if (mounted) setState(() => _position = position);
-    } catch (_) {
-      // Position stays null — backend has geolocation disabled so this is fine
-    }
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -165,8 +151,8 @@ class _ReservationDialogState extends State<ReservationDialog> {
       spotId:            widget.spot.id,
       badgeId:           widget.badgeId,
       expectedLeaveTime: _expectedLeaveTime,
-      latitude:          _position?.latitude,
-      longitude:         _position?.longitude,
+      latitude:          null, // geo disabled for testing
+      longitude:         null, // geo disabled for testing
     );
 
     final success =
