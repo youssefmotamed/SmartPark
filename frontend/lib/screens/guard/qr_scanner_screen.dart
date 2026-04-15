@@ -30,6 +30,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
   late final MobileScannerController _scannerController;
   late final AnimationController     _bracketAnimController;
+  late final TextEditingController   _manualController;
   bool _hasScanned   = false;
   bool _isEntryMode  = true;
 
@@ -49,6 +50,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
 
+    _manualController = TextEditingController();
     _isEntryMode = context.read<GuardProvider>().isEntryMode;
   }
 
@@ -56,6 +58,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   void dispose() {
     _scannerController.dispose();
     _bracketAnimController.dispose();
+    _manualController.dispose();
     super.dispose();
   }
 
@@ -76,6 +79,17 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   }
 
   // ── Toggle helper ─────────────────────────────────────────────────────────────
+
+  Future<void> _onManualSubmit() async {
+    final qrData = _manualController.text.trim();
+    if (qrData.isEmpty || _hasScanned) return;
+
+    setState(() => _hasScanned = true);
+    _scannerController.stop();
+
+    await context.read<GuardProvider>().processScan(qrData);
+    if (mounted) context.go('/guard/result');
+  }
 
   void _setMode(bool isEntry) {
     if (_isEntryMode == isEntry) return;
@@ -186,17 +200,85 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             ),
           ),
 
-          // Layer 5 — Bottom instruction
+          // Layer 5 — Bottom: manual entry + instruction text
           Positioned(
             bottom: 0,
             left:   0,
             right:  0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                padding: EdgeInsets.fromLTRB(
+                  20, 0, 20,
+                  MediaQuery.of(context).viewInsets.bottom + 24,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Manual QR entry field
+                    Container(
+                      decoration: BoxDecoration(
+                        color:        Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller:    _manualController,
+                              style:         const TextStyle(
+                                color:       Colors.white,
+                                fontSize:    14,
+                                fontWeight:  FontWeight.w500,
+                                letterSpacing: 0.5,
+                              ),
+                              decoration: InputDecoration(
+                                hintText:       'Enter QR code manually…',
+                                hintStyle:      TextStyle(
+                                  color:   Colors.white.withValues(alpha: 0.4),
+                                  fontSize: 13,
+                                ),
+                                border:         InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical:   14,
+                                ),
+                              ),
+                              textInputAction: TextInputAction.done,
+                              onSubmitted:    (_) => _onManualSubmit(),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _onManualSubmit,
+                            child: Container(
+                              margin:  const EdgeInsets.all(6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical:   10,
+                              ),
+                              decoration: BoxDecoration(
+                                color:        AppColors.warning,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Text(
+                                'Validate',
+                                style: TextStyle(
+                                  color:      Colors.black,
+                                  fontSize:   13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Instruction text
                     Text(
                       'Point camera at QR code',
                       style: AppTypography.bodyMedium.copyWith(
