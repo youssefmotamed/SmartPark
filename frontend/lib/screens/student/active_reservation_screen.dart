@@ -64,7 +64,7 @@ class _ActiveReservationScreenState extends State<ActiveReservationScreen>
     });
 
     // Poll every 30 s for ACTIVE → ENTERED status changes
-    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _loadReservation();
     });
   }

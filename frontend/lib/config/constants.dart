@@ -19,7 +19,7 @@ class AppConstants {
   static const int reservationTimerMinutes = 15;
 
   /// Interval (seconds) at which the app polls the backend for updates.
-  static const int pollingIntervalSeconds = 30;
+  static const int pollingIntervalSeconds = 10;
 
   /// Number of consecutive empty camera readings before a spot is considered vacated.
   static const int departureBufferSeconds = 60;
