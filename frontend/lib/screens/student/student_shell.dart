@@ -1,5 +1,6 @@
 // student_shell.dart — Student role persistent shell: top bar + 4-tab bottom nav
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,8 @@ import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../widgets/notification_bell.dart';
 import 'student_home_screen.dart';
 import 'profile_screen.dart';
 
@@ -61,10 +64,14 @@ class _StudentShellState extends State<StudentShell>
         TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 50),
       ]).animate(CurvedAnimation(parent: c, curve: Curves.easeInOut));
     }).toList();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().startPolling();
+    });
   }
 
   @override
   void dispose() {
+    context.read<NotificationProvider>().stopPolling();
     for (final c in _tabControllers) { c.dispose(); }
     super.dispose();
   }
@@ -91,7 +98,7 @@ class _StudentShellState extends State<StudentShell>
             accent: _accent,
             initial: initial,
             points: points,
-            onBellTap: () => debugPrint('[StudentShell] notifications tapped'),
+            onBellTap: () => context.go('/student/notifications'),
             onAvatarTap: () => _onTabTapped(3),
           ),
           Expanded(
@@ -214,7 +221,7 @@ class _TopBar extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           // Bell
-          _IconButton(icon: LucideIcons.bell, onTap: onBellTap),
+          NotificationBell(onTap: onBellTap),
           const SizedBox(width: AppSpacing.sm),
           // Avatar
           GestureDetector(
@@ -334,28 +341,6 @@ class _NavItem {
   const _NavItem({required this.icon, required this.label});
 }
 
-class _IconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _IconButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(icon, size: 20, color: AppColors.textSecondary),
-      ),
-    );
-  }
-}
 
 /// Generic placeholder for tabs not yet implemented.
 class _TabPlaceholder extends StatelessWidget {

@@ -8,6 +8,8 @@ import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../widgets/notification_bell.dart';
 import 'guard_home_screen.dart';
 
 /// Persistent layout wrapper for all guard screens.
@@ -61,10 +63,14 @@ class _GuardShellState extends State<GuardShell>
         TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 50),
       ]).animate(CurvedAnimation(parent: c, curve: Curves.easeInOut));
     }).toList();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().startPolling();
+    });
   }
 
   @override
   void dispose() {
+    context.read<NotificationProvider>().stopPolling();
     for (final c in _tabControllers) { c.dispose(); }
     super.dispose();
   }
@@ -84,7 +90,7 @@ class _GuardShellState extends State<GuardShell>
           _TopBar(
             accent: _accent,
             subtitle: 'Guard Dashboard',
-            onBellTap: () => debugPrint('[GuardShell] notifications tapped'),
+            onBellTap: () => context.go('/guard/notifications'),
           ),
           Expanded(
             child: IndexedStack(
@@ -174,18 +180,7 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           // Bell
-          GestureDetector(
-            onTap: onBellTap,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(LucideIcons.bell, size: 20, color: AppColors.textSecondary),
-            ),
-          ),
+          NotificationBell(onTap: onBellTap),
           const SizedBox(width: 8),
           // Logout
           GestureDetector(

@@ -16,6 +16,7 @@ import 'screens/student/reservation_cancelled_screen.dart';
 import 'screens/student/reservation_history_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'screens/guard/guard_shell.dart';
+import 'screens/shared/notification_screen.dart';
 import 'screens/guard/qr_scanner_screen.dart';
 import 'screens/guard/scan_result_screen.dart';
 import 'screens/admin/admin_shell.dart';
@@ -85,6 +86,10 @@ final GoRouter _router = GoRouter(
       path: '/student/reservation/cancelled',
       builder: (_, _) => const ReservationCancelledScreen(),
     ),
+    GoRoute(
+      path: '/student/notifications',
+      builder: (_, _) => const NotificationScreen(),
+    ),
 
     // ── Guard shell ──────────────────────────────────────────────────────────
     GoRoute(
@@ -98,6 +103,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/guard/result',
       builder: (_, _) => const ScanResultScreen(),
+    ),
+    GoRoute(
+      path: '/guard/notifications',
+      builder: (_, _) => const NotificationScreen(),
     ),
 
     // ── Admin shell ──────────────────────────────────────────────────────────
