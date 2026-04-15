@@ -37,6 +37,7 @@ public class GateService {
     private final ReservationRepository reservationRepository;
     private final BadgeCarRepository badgeCarRepository;
     private final UserRepository userRepository;
+    private final PointsService pointsService;
 
     /**
      * Processes a QR code scan at the entry gate.
@@ -116,7 +117,7 @@ public class GateService {
      *
      * @param guardId the ID of the guard performing the scan
      * @param request the scan request containing the QR code data
-     * @return a response with reservation details and points earned (always 0 until Phase 4)
+     * @return a response with reservation details and points earned for this session
      */
     public GateExitResponse scanExit(Long guardId, GateScanRequest request) {
         // 1. Find reservation by QR code
@@ -155,7 +156,10 @@ public class GateService {
         reservation.setExitGuard(userRepository.getReferenceById(guardId));
         reservationRepository.save(reservation);
 
-        // 4. Free the spot
+        // 4. Calculate and award points (sets reservation.pointsEarned via dirty check)
+        int pointsEarned = pointsService.calculateAndAwardPoints(reservation);
+
+        // 5. Free the spot
         reservation.getSpot().setStatus(SpotStatus.AVAILABLE);
         reservation.getSpot().setStatusUpdatedAt(LocalDateTime.now());
 
@@ -165,7 +169,7 @@ public class GateService {
                 .reservationId(reservation.getId())
                 .spotLabel(spotLabel)
                 .studentName(studentName)
-                .pointsEarned(0)
+                .pointsEarned(pointsEarned)
                 .exitRecorded(true)
                 .build();
     }
