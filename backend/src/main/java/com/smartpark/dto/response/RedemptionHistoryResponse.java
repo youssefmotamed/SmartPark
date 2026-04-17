@@ -23,6 +23,7 @@ public class RedemptionHistoryResponse {
     private String rewardType;
     private int pointsDeducted;
     private LocalDateTime redeemedAt;
+    private boolean used;
 
     /**
      * Builds a {@link RedemptionHistoryResponse} from a {@link RewardRedemption} entity.
@@ -39,6 +40,7 @@ public class RedemptionHistoryResponse {
                 .rewardType(r.getReward().getRewardType())
                 .pointsDeducted(Math.abs(r.getPointsLedger().getPoints()))
                 .redeemedAt(r.getRedeemedAt())
+                .used(r.isUsed())
                 .build();
     }
 }
