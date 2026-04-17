@@ -309,12 +309,13 @@ public class ReservationService {
                     "Your badge is suspended until " + badge.getSuspendedUntil());
         }
 
-        // 4. No existing active reservation on this badge
-        Optional<Reservation> existing = reservationRepository.findByBadgeIdAndStatusIn(
-                badge.getId(), List.of(ReservationStatus.ACTIVE, ReservationStatus.ENTERED));
-        if (existing.isPresent()) {
-            log.warn("User {} attempted to create duplicate reservation on badge {}", userId, badge.getId());
-            throw new BusinessRuleException("RESERVATION_EXISTS", "This badge already has an active reservation");
+        // 4. One-car-at-a-time: covers both individual (no double booking) and carpool (one car on campus)
+        if (reservationRepository.existsByBadgeIdAndStatusIn(
+                badge.getId(), List.of(ReservationStatus.ACTIVE, ReservationStatus.ENTERED))) {
+            log.warn("User {} attempted to create reservation on badge {} which already has a car on campus or active reservation",
+                    userId, badge.getId());
+            throw new BusinessRuleException("BADGE_ALREADY_ON_CAMPUS",
+                    "Another car from your badge is currently on campus or has an active reservation");
         }
 
         // 5. Spot existence and availability

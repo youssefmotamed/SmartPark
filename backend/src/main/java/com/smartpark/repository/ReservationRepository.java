@@ -18,6 +18,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     Optional<Reservation> findByBadgeIdAndStatusIn(Long badgeId, List<ReservationStatus> statuses);
 
+    boolean existsByBadgeIdAndStatusIn(Long badgeId, List<ReservationStatus> statuses);
+
     Optional<Reservation> findByQrCodeData(String qrCodeData);
 
     List<Reservation> findByBadgeIdOrderByReservedAtDesc(Long badgeId);
@@ -41,4 +43,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findExpiredReservations(@Param("now") LocalDateTime now);
 
     List<Reservation> findByStatusAndExpiresAtBetween(ReservationStatus status, LocalDateTime start, LocalDateTime end);
+
+    Optional<Reservation> findFirstByBadgeIdAndStatusInOrderByReservedAtDesc(Long badgeId, List<ReservationStatus> statuses);
 }
