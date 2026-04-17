@@ -1,22 +1,27 @@
 // Business logic for badge creation and management.
 package com.smartpark.service;
 
+import com.smartpark.dto.request.AddCarRequest;
 import com.smartpark.dto.request.CreateBadgeRequest;
 import com.smartpark.dto.request.InviteMemberRequest;
+import com.smartpark.dto.response.BadgeReservationResponse;
 import com.smartpark.dto.response.BadgeResponse;
 import com.smartpark.exception.BusinessRuleException;
 import com.smartpark.exception.ResourceNotFoundException;
 import com.smartpark.model.Badge;
 import com.smartpark.model.BadgeCar;
 import com.smartpark.model.BadgeMember;
+import com.smartpark.model.Reservation;
 import com.smartpark.model.User;
 import com.smartpark.model.enums.BadgeMemberStatus;
 import com.smartpark.model.enums.BadgeStatus;
 import com.smartpark.model.enums.BadgeType;
 import com.smartpark.model.enums.NotificationType;
+import com.smartpark.model.enums.ReservationStatus;
 import com.smartpark.repository.BadgeCarRepository;
 import com.smartpark.repository.BadgeMemberRepository;
 import com.smartpark.repository.BadgeRepository;
+import com.smartpark.repository.ReservationRepository;
 import com.smartpark.repository.UserRepository;
 import com.smartpark.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +47,7 @@ public class BadgeService {
     private final BadgeMemberRepository badgeMemberRepository;
     private final BadgeCarRepository badgeCarRepository;
     private final UserRepository userRepository;
+    private final ReservationRepository reservationRepository;
     private final NotificationService notificationService;
 
     /**
@@ -215,6 +221,116 @@ public class BadgeService {
         log.info("Badge {} invitation accepted by user {}", badgeId, currentUserId);
 
         return buildResponseFromDb(badge);
+    }
+
+    /**
+     * Adds a new car plate to an existing badge slot on behalf of an accepted member.
+     * Only the badge creator (canInvite=true) may call this.
+     *
+     * @param badgeId badge to add the car to
+     * @param request plate number, optional car model, and the member's DB user ID
+     * @return updated badge detail response
+     */
+    @Transactional
+    public BadgeResponse addCar(Long badgeId, AddCarRequest request) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        Badge badge = badgeRepository.findById(badgeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Badge not found"));
+
+        // Verify caller is the badge creator
+        BadgeMember callerMember = badgeMemberRepository.findByBadgeIdAndUserId(badgeId, currentUserId)
+                .orElseThrow(() -> new BusinessRuleException("NOT_BADGE_CREATOR",
+                        "You do not have permission to add cars to this badge"));
+        if (!callerMember.getCanInvite()) {
+            throw new BusinessRuleException("NOT_BADGE_CREATOR",
+                    "You do not have permission to add cars to this badge");
+        }
+
+        // Enforce slot limit
+        long carCount = badgeCarRepository.countByBadgeId(badgeId);
+        if (carCount >= badge.getMaxSlots()) {
+            throw new BusinessRuleException("NO_SLOTS_AVAILABLE", "All slots for this badge are filled");
+        }
+
+        // forUserId must be an ACCEPTED member
+        badgeMemberRepository.findByBadgeIdAndUserIdAndStatus(badgeId, request.getForUserId(), BadgeMemberStatus.ACCEPTED)
+                .orElseThrow(() -> new BusinessRuleException("NOT_A_MEMBER",
+                        "The specified user is not an accepted member of this badge"));
+
+        // Plate must not already be registered on this badge
+        if (badgeCarRepository.existsByBadgeIdAndPlateNumber(badgeId, request.getPlateNumber())) {
+            throw new BusinessRuleException("PLATE_ALREADY_REGISTERED",
+                    "This plate is already registered under this badge");
+        }
+
+        User forUser = userRepository.findById(request.getForUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        BadgeCar badgeCar = BadgeCar.builder()
+                .badge(badge)
+                .user(forUser)
+                .plateNumber(request.getPlateNumber())
+                .carModel(request.getCarModel())
+                .build();
+        badgeCarRepository.save(badgeCar);
+
+        log.info("Badge {} car {} added for user {}", badgeId, request.getPlateNumber(), request.getForUserId());
+
+        return buildResponseFromDb(badge);
+    }
+
+    /**
+     * Returns full badge detail to any current member (any BadgeMember status).
+     *
+     * @param badgeId badge to retrieve
+     * @return badge detail response
+     */
+    public BadgeResponse getBadgeDetail(Long badgeId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        Badge badge = badgeRepository.findById(badgeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Badge not found"));
+
+        if (!badgeMemberRepository.existsByBadgeIdAndUserId(badgeId, currentUserId)) {
+            throw new BusinessRuleException("NOT_A_MEMBER", "You are not a member of this badge");
+        }
+
+        return buildResponseFromDb(badge);
+    }
+
+    /**
+     * Returns the most recent active or entered reservation for the given badge.
+     * Caller must be an ACCEPTED member of the badge.
+     *
+     * @param badgeId badge whose reservation to retrieve
+     * @return reservation summary response
+     */
+    public BadgeReservationResponse getBadgeReservation(Long badgeId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        badgeRepository.findById(badgeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Badge not found"));
+
+        badgeMemberRepository.findByBadgeIdAndUserIdAndStatus(badgeId, currentUserId, BadgeMemberStatus.ACCEPTED)
+                .orElseThrow(() -> new BusinessRuleException("NOT_A_MEMBER",
+                        "You are not an accepted member of this badge"));
+
+        Reservation reservation = reservationRepository
+                .findFirstByBadgeIdAndStatusInOrderByReservedAtDesc(
+                        badgeId, List.of(ReservationStatus.ACTIVE, ReservationStatus.ENTERED))
+                .orElseThrow(() -> new ResourceNotFoundException("No active reservation found for this badge"));
+
+        return BadgeReservationResponse.builder()
+                .reservationId(reservation.getId())
+                .spotLabel(reservation.getSpot().getSpotLabel())
+                .zoneCode(reservation.getSpot().getZone().getZoneCode())
+                .status(reservation.getStatus().name())
+                .reservedByName(reservation.getUser().getFullName())
+                .reservedAt(reservation.getReservedAt())
+                .expectedLeaveTime(reservation.getExpectedLeaveTime())
+                .expiresAt(reservation.getExpiresAt())
+                .build();
     }
 
     // -------------------------------------------------------------------------

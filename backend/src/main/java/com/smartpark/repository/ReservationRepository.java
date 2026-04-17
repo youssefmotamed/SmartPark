@@ -41,4 +41,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findExpiredReservations(@Param("now") LocalDateTime now);
 
     List<Reservation> findByStatusAndExpiresAtBetween(ReservationStatus status, LocalDateTime start, LocalDateTime end);
+
+    Optional<Reservation> findFirstByBadgeIdAndStatusInOrderByReservedAtDesc(Long badgeId, List<ReservationStatus> statuses);
 }

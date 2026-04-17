@@ -19,4 +19,6 @@ public interface BadgeCarRepository extends JpaRepository<BadgeCar, Long> {
 
     /** Returns the first car ever registered by this user across all badges (oldest by id). */
     Optional<BadgeCar> findFirstByUserIdOrderByIdAsc(Long userId);
+
+    boolean existsByBadgeIdAndPlateNumber(Long badgeId, String plateNumber);
 }
