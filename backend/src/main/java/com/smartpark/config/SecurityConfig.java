@@ -42,6 +42,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/guard/**").hasRole("GUARD")
                         .requestMatchers("/api/v1/gate/**").hasRole("GUARD")
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/badges").hasRole("STUDENT")
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/badges/*/invite").hasRole("STUDENT")
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/badges/*/accept").hasRole("STUDENT")
                         .anyRequest().authenticated())
                 .userDetailsService(userDetailsService)
                 .authenticationProvider(authenticationProvider())

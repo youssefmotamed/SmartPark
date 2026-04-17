@@ -2,6 +2,7 @@
 package com.smartpark.service;
 
 import com.smartpark.dto.request.CreateBadgeRequest;
+import com.smartpark.dto.request.InviteMemberRequest;
 import com.smartpark.dto.response.BadgeResponse;
 import com.smartpark.exception.BusinessRuleException;
 import com.smartpark.exception.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import com.smartpark.model.User;
 import com.smartpark.model.enums.BadgeMemberStatus;
 import com.smartpark.model.enums.BadgeStatus;
 import com.smartpark.model.enums.BadgeType;
+import com.smartpark.model.enums.NotificationType;
 import com.smartpark.repository.BadgeCarRepository;
 import com.smartpark.repository.BadgeMemberRepository;
 import com.smartpark.repository.BadgeRepository;
@@ -40,6 +42,7 @@ public class BadgeService {
     private final BadgeMemberRepository badgeMemberRepository;
     private final BadgeCarRepository badgeCarRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * Creates a new parking badge for the currently authenticated student.
@@ -114,6 +117,106 @@ public class BadgeService {
         return buildResponse(badge, List.of(member), List.of(badgeCar));
     }
 
+    /**
+     * Invites a student to an existing carpool badge.
+     * Only the badge creator (canInvite=true) may send invitations.
+     * A BadgeMember record (PENDING) and a BadgeCar record are saved in the same transaction.
+     *
+     * @param badgeId ID of the badge to invite into
+     * @param request contains the studentId of the user to invite
+     * @return updated badge detail response
+     */
+    public BadgeResponse inviteMember(Long badgeId, InviteMemberRequest request) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        Badge badge = badgeRepository.findById(badgeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Badge not found"));
+
+        // Verify caller has permission to invite
+        BadgeMember callerMember = badgeMemberRepository.findByBadgeIdAndUserId(badgeId, currentUserId)
+                .orElseThrow(() -> new BusinessRuleException("NOT_BADGE_CREATOR",
+                        "You do not have permission to invite members to this badge"));
+        if (!callerMember.getCanInvite()) {
+            throw new BusinessRuleException("NOT_BADGE_CREATOR",
+                    "You do not have permission to invite members to this badge");
+        }
+
+        // Check available slots (one BadgeCar per member)
+        long carCount = badgeCarRepository.countByBadgeId(badgeId);
+        if (carCount >= badge.getMaxSlots()) {
+            throw new BusinessRuleException("NO_SLOTS_AVAILABLE", "All slots for this badge are filled");
+        }
+
+        // Resolve invited student by university student ID
+        User invitedUser = userRepository.findByStudentId(request.getStudentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        // Guard against duplicate invitations
+        if (badgeMemberRepository.existsByBadgeIdAndUserId(badgeId, invitedUser.getId())) {
+            throw new BusinessRuleException("ALREADY_INVITED",
+                    "This student has already been invited to this badge");
+        }
+
+        // Invited student must already have a car registered
+        BadgeCar invitedCar = badgeCarRepository.findFirstByUserIdOrderByIdAsc(invitedUser.getId())
+                .orElseThrow(() -> new BusinessRuleException("INVITED_USER_NO_CAR",
+                        "The invited student has no registered car"));
+
+        // Create BadgeMember (PENDING)
+        BadgeMember newMember = BadgeMember.builder()
+                .badge(badge)
+                .user(invitedUser)
+                .status(BadgeMemberStatus.PENDING)
+                .canInvite(false)
+                .joinedAt(null)
+                .build();
+        badgeMemberRepository.save(newMember);
+
+        // Register invited student's car on this badge
+        BadgeCar badgeCar = BadgeCar.builder()
+                .badge(badge)
+                .user(invitedUser)
+                .plateNumber(invitedCar.getPlateNumber())
+                .carModel(invitedCar.getCarModel())
+                .build();
+        badgeCarRepository.save(badgeCar);
+
+        notificationService.createNotification(invitedUser.getId(), NotificationType.CARPOOL_INVITE,
+                "Carpool Invitation", "You have been invited to join a carpool badge");
+
+        log.info("Badge {} invitation sent to user {} by user {}", badgeId, invitedUser.getId(), currentUserId);
+
+        return buildResponseFromDb(badge);
+    }
+
+    /**
+     * Accepts a pending carpool badge invitation for the currently authenticated student.
+     *
+     * @param badgeId ID of the badge whose invitation to accept
+     * @return updated badge detail response
+     */
+    public BadgeResponse acceptInvitation(Long badgeId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        Badge badge = badgeRepository.findById(badgeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Badge not found"));
+
+        BadgeMember member = badgeMemberRepository.findByBadgeIdAndUserId(badgeId, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("No invitation found for this badge"));
+
+        if (member.getStatus() != BadgeMemberStatus.PENDING) {
+            throw new BusinessRuleException("NOT_PENDING", "No pending invitation found for this badge");
+        }
+
+        member.setStatus(BadgeMemberStatus.ACCEPTED);
+        member.setJoinedAt(LocalDateTime.now());
+        badgeMemberRepository.save(member);
+
+        log.info("Badge {} invitation accepted by user {}", badgeId, currentUserId);
+
+        return buildResponseFromDb(badge);
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -127,6 +230,13 @@ public class BadgeService {
         } else {
             return LocalDateTime.of(semesterYear, 6, 30, 23, 59, 59);
         }
+    }
+
+    /** Reloads members and cars from DB then delegates to buildResponse. */
+    private BadgeResponse buildResponseFromDb(Badge badge) {
+        List<BadgeMember> members = badgeMemberRepository.findByBadgeId(badge.getId());
+        List<BadgeCar> cars = badgeCarRepository.findByBadgeId(badge.getId());
+        return buildResponse(badge, members, cars);
     }
 
     private BadgeResponse buildResponse(Badge badge, List<BadgeMember> members, List<BadgeCar> cars) {
