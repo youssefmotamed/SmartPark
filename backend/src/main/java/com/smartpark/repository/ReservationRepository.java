@@ -18,6 +18,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     Optional<Reservation> findByBadgeIdAndStatusIn(Long badgeId, List<ReservationStatus> statuses);
 
+    boolean existsByBadgeIdAndStatusIn(Long badgeId, List<ReservationStatus> statuses);
+
     Optional<Reservation> findByQrCodeData(String qrCodeData);
 
     List<Reservation> findByBadgeIdOrderByReservedAtDesc(Long badgeId);
