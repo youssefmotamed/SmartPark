@@ -15,6 +15,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/student/active_reservation_screen.dart';
 import 'screens/student/reservation_cancelled_screen.dart';
+import 'screens/student/points_balance_screen.dart';
 import 'screens/student/reservation_history_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'screens/guard/guard_shell.dart';
@@ -93,6 +94,24 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/student/notifications',
       builder: (_, _) => const NotificationScreen(),
+    ),
+    GoRoute(
+      path: '/student/points',
+      builder: (_, _) => const PointsBalanceScreen(),
+    ),
+    GoRoute(
+      path: '/student/points/history',
+      builder: (_, _) => Scaffold(
+        appBar: AppBar(title: const Text('Points History')),
+        body: const Center(child: Text('Coming soon')),
+      ),
+    ),
+    GoRoute(
+      path: '/student/rewards',
+      builder: (_, _) => Scaffold(
+        appBar: AppBar(title: const Text('Rewards Store')),
+        body: const Center(child: Text('Coming soon')),
+      ),
     ),
 
     // ── Guard shell ──────────────────────────────────────────────────────────
