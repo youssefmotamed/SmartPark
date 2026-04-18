@@ -19,7 +19,8 @@ import '../../providers/points_provider.dart';
 ///
 /// Loads [PointsProvider.loadBalanceAndSummary] on open.
 class PointsBalanceScreen extends StatefulWidget {
-  const PointsBalanceScreen({super.key});
+  final bool showAppBar;
+  const PointsBalanceScreen({super.key, this.showAppBar = true});
 
   @override
   State<PointsBalanceScreen> createState() => _PointsBalanceScreenState();
@@ -77,21 +78,23 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft,
-              color: AppColors.textSecondary),
-          onPressed: () => context.pop(),
-        ),
-        title: Text('Points', style: AppTypography.displaySmall),
-        centerTitle: true,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: AppColors.divider),
-        ),
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              backgroundColor: AppColors.surface,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(LucideIcons.arrowLeft,
+                    color: AppColors.textSecondary),
+                onPressed: () => context.pop(),
+              ),
+              title: Text('Points', style: AppTypography.displaySmall),
+              centerTitle: true,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1),
+                child: Container(height: 1, color: AppColors.divider),
+              ),
+            )
+          : null,
       body: () {
         if (loading && provider.balance == null) {
           return const Center(

@@ -44,6 +44,21 @@ class ReservationService extends BaseApiService {
     await delete('/reservations/$reservationId');
   }
 
+  /// Creates an advance reservation without geolocation validation.
+  /// Calls POST /reservations/advance with spotId, badgeId, expectedLeaveTime.
+  Future<ReservationResponse> createAdvanceReservation({
+    required int spotId,
+    required int badgeId,
+    required DateTime expectedLeaveTime,
+  }) async {
+    final response = await post('/reservations/advance', body: {
+      'spotId':             spotId,
+      'badgeId':            badgeId,
+      'expectedLeaveTime':  expectedLeaveTime.toIso8601String(),
+    });
+    return ReservationResponse.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
   /// Gets the QR code string for a reservation.
   /// The data field is a plain String, not an object.
   Future<String> getQrCode(int reservationId) async {

@@ -14,11 +14,13 @@ import 'reservation_dialog.dart';
 class SpotDetailSheet extends StatefulWidget {
   final Spot spot;
   final bool isTooFar;
+  final bool isAdvanceReservation;
 
   const SpotDetailSheet({
     super.key,
     required this.spot,
     required this.isTooFar,
+    this.isAdvanceReservation = false,
   });
 
   @override
@@ -79,11 +81,13 @@ class _SpotDetailSheetState extends State<SpotDetailSheet> {
   }
 
   String? _disabledReason() {
-    if (widget.isTooFar) return 'Move closer to campus to reserve';
-    if (_isLoadingBadge) return null; // still loading, disable but no text
+    if (!widget.isAdvanceReservation && widget.isTooFar) {
+      return 'Move closer to campus to reserve';
+    }
+    if (_isLoadingBadge) return null;
     if (_badgeError != null) return 'Badge required to reserve';
     if (_badgeId == null) return 'No active badge found';
-    return null; // enabled
+    return null;
   }
 
   // ── Actions ──────────────────────────────────────────────────────────────────
@@ -95,9 +99,10 @@ class _SpotDetailSheetState extends State<SpotDetailSheet> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => ReservationDialog(
-        spot:      widget.spot,
-        badgeId:   _badgeId!,
-        badgeType: _badgeType ?? 'INDIVIDUAL',
+        spot:                 widget.spot,
+        badgeId:              _badgeId!,
+        badgeType:            _badgeType ?? 'INDIVIDUAL',
+        isAdvanceReservation: widget.isAdvanceReservation,
       ),
     );
   }

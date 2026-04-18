@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/notification_bell.dart';
 import 'student_home_screen.dart';
+import 'points_balance_screen.dart';
 import 'profile_screen.dart';
 
 /// Persistent layout wrapper for all student screens.
@@ -40,7 +41,7 @@ class _StudentShellState extends State<StudentShell>
 
   static final _screens = [
     const StudentHomeScreen(),
-    const _TabPlaceholder(title: 'Points',  icon: LucideIcons.zap,   note: 'Coming in Phase 3'),
+    const PointsBalanceScreen(showAppBar: false),
     const _TabPlaceholder(title: 'Badge',   icon: LucideIcons.shield, note: 'Coming in Phase 3'),
     const ProfileScreen(),
   ];
@@ -100,6 +101,7 @@ class _StudentShellState extends State<StudentShell>
             points: points,
             onBellTap: () => context.go('/student/notifications'),
             onAvatarTap: () => _onTabTapped(3),
+            onPointsTap: () => _onTabTapped(1),
           ),
           Expanded(
             child: IndexedStack(
@@ -128,6 +130,7 @@ class _TopBar extends StatelessWidget {
   final Color accent;
   final VoidCallback onBellTap;
   final VoidCallback onAvatarTap;
+  final VoidCallback onPointsTap;
   final int points;
   final String initial;
 
@@ -135,6 +138,7 @@ class _TopBar extends StatelessWidget {
     required this.accent,
     required this.onBellTap,
     required this.onAvatarTap,
+    required this.onPointsTap,
     required this.points,
     required this.initial,
   });
@@ -196,27 +200,30 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           // Points pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.warning.withAlpha(28),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.warning.withAlpha(60)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(LucideIcons.star, size: 13, color: AppColors.warning),
-                const SizedBox(width: 4),
-                Text(
-                  '$points',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.warning,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+          GestureDetector(
+            onTap: onPointsTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withAlpha(28),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.warning.withAlpha(60)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(LucideIcons.star, size: 13, color: AppColors.warning),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$points',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.warning,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

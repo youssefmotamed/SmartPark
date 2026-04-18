@@ -1,5 +1,5 @@
 // rewards_provider.dart — Manages rewards catalogue and redemption flow for SmartPark
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/reward.dart';
 import '../services/rewards_service.dart';
 import '../services/base_api_service.dart';
@@ -68,7 +68,7 @@ class RewardsProvider extends ChangeNotifier {
   ///
   /// On failure:
   /// - Sets [redemptionError] with the server error message
-  Future<bool> redeemReward(int rewardId) async {
+  Future<bool> redeemReward(int rewardId, {VoidCallback? onSuccess}) async {
     _isRedeeming      = true;
     _redemptionError  = null;
     _lastRedemptionResult = null;
@@ -82,8 +82,8 @@ class RewardsProvider extends ChangeNotifier {
         _advanceReservationUnlocked = true;
       }
 
-      // Reload so canAfford flags reflect the updated balance
       await loadRewards();
+      onSuccess?.call();
 
       return true;
     } on ApiException catch (e) {

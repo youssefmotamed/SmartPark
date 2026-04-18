@@ -91,6 +91,35 @@ class ReservationProvider extends ChangeNotifier {
     }
   }
 
+  /// Creates an advance reservation (geolocation bypassed). Returns true on success.
+  Future<bool> createAdvanceReservation({
+    required int spotId,
+    required int badgeId,
+    required DateTime expectedLeaveTime,
+  }) async {
+    _isCreating  = true;
+    _createError = null;
+    notifyListeners();
+    try {
+      _activeReservation = await _service.createAdvanceReservation(
+        spotId:            spotId,
+        badgeId:           badgeId,
+        expectedLeaveTime: expectedLeaveTime,
+      );
+      _startCountdownIfNeeded();
+      return true;
+    } on ApiException catch (e) {
+      _createError = _mapCreateError(e);
+      return false;
+    } catch (_) {
+      _createError = 'Connection error. Please try again.';
+      return false;
+    } finally {
+      _isCreating = false;
+      notifyListeners();
+    }
+  }
+
   /// Cancels the active reservation. Returns true on success.
   Future<bool> cancelReservation() async {
     if (_activeReservation == null) return false;

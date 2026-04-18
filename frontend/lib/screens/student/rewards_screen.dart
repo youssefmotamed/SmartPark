@@ -53,7 +53,12 @@ class _RewardsScreenState extends State<RewardsScreen> {
     if (mounted) Navigator.of(context).pop();
 
     final provider = context.read<RewardsProvider>();
-    final success = await provider.redeemReward(reward.id);
+    final success = await provider.redeemReward(
+      reward.id,
+      onSuccess: () {
+        context.read<PointsProvider>().loadBalanceAndSummary();
+      },
+    );
 
     if (!mounted) return;
 
