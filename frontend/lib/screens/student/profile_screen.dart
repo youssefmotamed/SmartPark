@@ -289,7 +289,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildPointsCard(int points) {
     return _TappableCard(
-      onTap: () => debugPrint('Navigate to Points — Phase 4'),
+      onTap: () => context.push('/student/points'),
       child: Row(
         children: [
           Expanded(
