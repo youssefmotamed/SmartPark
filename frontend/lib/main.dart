@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/badge_provider.dart';
 import 'providers/guard_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/points_provider.dart';
@@ -46,6 +47,7 @@ class SmartParkApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => PointsProvider()),
         ChangeNotifierProvider(create: (_) => RewardsProvider()),
+        ChangeNotifierProvider(create: (_) => BadgeProvider()),
       ],
       child: MaterialApp.router(
         title: 'SmartPark',
