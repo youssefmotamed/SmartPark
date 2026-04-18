@@ -17,6 +17,7 @@ import 'screens/student/active_reservation_screen.dart';
 import 'screens/student/reservation_cancelled_screen.dart';
 import 'screens/student/points_balance_screen.dart';
 import 'screens/student/points_history_screen.dart';
+import 'screens/student/rewards_screen.dart';
 import 'screens/student/reservation_history_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'screens/guard/guard_shell.dart';
@@ -106,9 +107,13 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/student/rewards',
+      builder: (_, _) => const RewardsScreen(),
+    ),
+    GoRoute(
+      path: '/student/advance-reservation',
       builder: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Rewards Store')),
-        body: const Center(child: Text('Coming soon')),
+        appBar: AppBar(title: const Text('Advance Reservation')),
+        body: const Center(child: Text('Coming soon — S14')),
       ),
     ),
 
