@@ -44,7 +44,7 @@ class PointsTransaction {
       points:          json['points']          as int,
       transactionType: json['transactionType'] as String,
       description:     json['description']     as String,
-      createdAt:       DateTime.parse(json['createdAt'] as String),
+      createdAt:       DateTime.parse(json['earnedAt'] as String),
       expiresAt:       json['expiresAt'] != null
                            ? DateTime.parse(json['expiresAt'] as String)
                            : null,

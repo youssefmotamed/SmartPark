@@ -89,7 +89,9 @@ class PointsProvider extends ChangeNotifier {
       final data  = await _service.getHistory(type: _selectedFilter, page: 0);
       final items = _service.parseTransactions(data);
       _transactions = items;
-      _hasMore      = items.length == _pageSize;
+      _currentPage  = (data['number'] as num?)?.toInt() ?? 0;
+      final total   = (data['totalElements'] as num?)?.toInt() ?? 0;
+      _hasMore      = (_currentPage + 1) * _pageSize < total;
     } on ApiException catch (e) {
       _error = e.toString();
     } catch (_) {
@@ -114,8 +116,9 @@ class PointsProvider extends ChangeNotifier {
       );
       final items = _service.parseTransactions(data);
       _transactions.addAll(items);
-      _currentPage++;
-      _hasMore = items.length == _pageSize;
+      _currentPage = (data['number'] as num?)?.toInt() ?? (_currentPage + 1);
+      final total  = (data['totalElements'] as num?)?.toInt() ?? 0;
+      _hasMore     = (_currentPage + 1) * _pageSize < total;
     } on ApiException catch (e) {
       _error = e.toString();
     } catch (_) {

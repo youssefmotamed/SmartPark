@@ -11,8 +11,8 @@ class RedemptionRecord {
   /// Display name of the redeemed reward.
   final String rewardName;
 
-  /// Machine-readable reward type, e.g. "ADVANCE_RESERVATION".
-  final String rewardType;
+  /// Machine-readable reward type, e.g. "ADVANCE_RESERVATION". Nullable for safety.
+  final String? rewardType;
 
   /// Points that were deducted from the badge balance at redemption time.
   final int pointsDeducted;
@@ -20,29 +20,21 @@ class RedemptionRecord {
   /// When the redemption was made.
   final DateTime redeemedAt;
 
-  /// Whether the redemption token has already been consumed.
-  final bool used;
-
   const RedemptionRecord({
     required this.id,
     required this.rewardName,
-    required this.rewardType,
+    this.rewardType,
     required this.pointsDeducted,
     required this.redeemedAt,
-    required this.used,
   });
-
-  /// True if the redemption is still available to use.
-  bool get isAvailable => !used;
 
   factory RedemptionRecord.fromJson(Map<String, dynamic> json) {
     return RedemptionRecord(
       id:             json['id']             as int,
       rewardName:     json['rewardName']     as String,
-      rewardType:     json['rewardType']     as String,
+      rewardType:     json['rewardType']     as String?,
       pointsDeducted: json['pointsDeducted'] as int,
       redeemedAt:     DateTime.parse(json['redeemedAt'] as String),
-      used:           json['used']           as bool? ?? false,
     );
   }
 
@@ -52,6 +44,5 @@ class RedemptionRecord {
     'rewardType':     rewardType,
     'pointsDeducted': pointsDeducted,
     'redeemedAt':     redeemedAt.toIso8601String(),
-    'used':           used,
   };
 }

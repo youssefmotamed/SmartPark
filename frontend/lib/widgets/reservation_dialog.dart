@@ -20,12 +20,14 @@ class ReservationDialog extends StatefulWidget {
   final Spot   spot;
   final int    badgeId;
   final String badgeType;
+  final bool   isAdvanceReservation;
 
   const ReservationDialog({
     super.key,
     required this.spot,
     required this.badgeId,
     required this.badgeType,
+    this.isAdvanceReservation = false,
   });
 
   @override
@@ -147,16 +149,23 @@ class _ReservationDialogState extends State<ReservationDialog> {
   Future<void> _submitReservation() async {
     setState(() => _isSubmitting = true);
 
-    final request = CreateReservationRequest(
-      spotId:            widget.spot.id,
-      badgeId:           widget.badgeId,
-      expectedLeaveTime: _expectedLeaveTime,
-      latitude:          null, // geo disabled for testing
-      longitude:         null, // geo disabled for testing
-    );
-
-    final success =
-        await context.read<ReservationProvider>().createReservation(request);
+    final bool success;
+    if (widget.isAdvanceReservation) {
+      success = await context.read<ReservationProvider>().createAdvanceReservation(
+        spotId:            widget.spot.id,
+        badgeId:           widget.badgeId,
+        expectedLeaveTime: _expectedLeaveTime,
+      );
+    } else {
+      final request = CreateReservationRequest(
+        spotId:            widget.spot.id,
+        badgeId:           widget.badgeId,
+        expectedLeaveTime: _expectedLeaveTime,
+        latitude:          null,
+        longitude:         null,
+      );
+      success = await context.read<ReservationProvider>().createReservation(request);
+    }
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
