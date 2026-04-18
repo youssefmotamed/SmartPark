@@ -9,4 +9,7 @@ import java.util.List;
 public interface RewardRedemptionRepository extends JpaRepository<RewardRedemption, Long> {
 
     List<RewardRedemption> findByUserIdOrderByRedeemedAtDesc(Long userId);
+
+    /** Returns all unused (advance-reservation) redemptions for a given user. */
+    List<RewardRedemption> findByUserIdAndUsedFalse(Long userId);
 }
