@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
+import 'providers/admin_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/badge_provider.dart';
 import 'providers/guard_provider.dart';
@@ -50,6 +51,7 @@ class SmartParkApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SpotsProvider()),
         ChangeNotifierProvider(create: (_) => ReservationProvider()),
         ChangeNotifierProvider(create: (_) => GuardProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => PointsProvider()),
         ChangeNotifierProvider(create: (_) => RewardsProvider()),
