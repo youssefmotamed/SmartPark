@@ -1,12 +1,15 @@
-// REST controller for guard-specific operations: guest parking, spot overrides, and active reservation listing.
+// REST controller for guard-specific operations: guest parking, spot overrides, violations, and active reservation listing.
 package com.smartpark.controller;
 
 import com.smartpark.dto.request.CreateGuestParkingRequest;
+import com.smartpark.dto.request.ReportViolationRequest;
 import com.smartpark.dto.request.SpotOverrideRequest;
 import com.smartpark.dto.response.ApiResponse;
 import com.smartpark.dto.response.GuestParkingResponse;
 import com.smartpark.dto.response.GuardReservationResponse;
+import com.smartpark.dto.response.ViolationResponse;
 import com.smartpark.service.GuardService;
+import com.smartpark.service.ViolationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +28,7 @@ import java.util.List;
 public class GuardController {
 
     private final GuardService guardService;
+    private final ViolationService violationService;
 
     /**
      * Creates a guest parking session for a non-registered vehicle in Zone C.
@@ -82,5 +86,21 @@ public class GuardController {
     public ResponseEntity<ApiResponse<List<GuardReservationResponse>>> getActiveReservations() {
         List<GuardReservationResponse> list = guardService.getActiveReservations();
         return ResponseEntity.ok(ApiResponse.success(list));
+    }
+
+    /**
+     * Reports a parking violation against the badge registered to the given plate number.
+     * Suspends the badge and cancels any active reservation.
+     *
+     * @param request plate number, violation type, and optional notes
+     * @return 201 with suspension details and affected student names
+     */
+    @PostMapping("/violations")
+    @PreAuthorize("hasRole('GUARD')")
+    public ResponseEntity<ApiResponse<ViolationResponse>> reportViolation(
+            @Valid @RequestBody ReportViolationRequest request) {
+        ViolationResponse response = violationService.reportViolation(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, "Violation reported successfully"));
     }
 }
