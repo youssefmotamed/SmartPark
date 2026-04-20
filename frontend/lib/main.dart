@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
+import 'providers/admin_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/badge_provider.dart';
 import 'providers/guard_provider.dart';
@@ -28,10 +29,14 @@ import 'screens/student/add_car_screen.dart';
 import 'screens/student/invitation_screen.dart';
 import 'screens/student/reservation_history_screen.dart';
 import 'screens/student/student_shell.dart';
+import 'screens/guard/active_reservations_screen.dart';
+import 'screens/guard/guest_parking_screen.dart';
 import 'screens/guard/guard_shell.dart';
 import 'screens/shared/notification_screen.dart';
 import 'screens/guard/qr_scanner_screen.dart';
 import 'screens/guard/scan_result_screen.dart';
+import 'screens/guard/violation_report_screen.dart';
+import 'screens/guard/spot_override_screen.dart';
 import 'screens/admin/admin_shell.dart';
 
 void main() {
@@ -50,6 +55,7 @@ class SmartParkApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SpotsProvider()),
         ChangeNotifierProvider(create: (_) => ReservationProvider()),
         ChangeNotifierProvider(create: (_) => GuardProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => PointsProvider()),
         ChangeNotifierProvider(create: (_) => RewardsProvider()),
@@ -171,6 +177,22 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/guard/notifications',
       builder: (_, _) => const NotificationScreen(),
+    ),
+    GoRoute(
+      path: '/guard/active',
+      builder: (_, _) => const ActiveReservationsScreen(),
+    ),
+    GoRoute(
+      path: '/guard/guest-parking',
+      builder: (_, _) => const GuestParkingScreen(),
+    ),
+    GoRoute(
+      path: '/guard/violation',
+      builder: (_, _) => const ViolationReportScreen(),
+    ),
+    GoRoute(
+      path: '/guard/override',
+      builder: (_, _) => const SpotOverrideScreen(),
     ),
 
     // ── Admin shell ──────────────────────────────────────────────────────────

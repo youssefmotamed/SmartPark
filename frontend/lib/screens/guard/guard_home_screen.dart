@@ -35,7 +35,7 @@ class GuardHomeScreen extends StatelessWidget {
       icon:  LucideIcons.parkingCircle,
       label: 'Guest Parking',
       sub:   'Zone C management',
-      route: '/guard/guest',
+      route: '/guard/guest-parking',
       color: AppColors.success,
     ),
     _ActionData(
@@ -101,17 +101,7 @@ class GuardHomeScreen extends StatelessWidget {
                 children: _actions.map((data) {
                   return _ActionCard(
                     data: data,
-                    onTap: data.route == '/guard/scanner'
-                        ? () => context.go(data.route)
-                        : () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Coming in Phase 6'),
-                                behavior: SnackBarBehavior.floating,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
+                    onTap: () => context.go(data.route),
                   );
                 }).toList(),
               ),
