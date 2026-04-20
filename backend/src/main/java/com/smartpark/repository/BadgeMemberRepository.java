@@ -23,4 +23,6 @@ public interface BadgeMemberRepository extends JpaRepository<BadgeMember, Long> 
     List<BadgeMember> findByBadgeIdAndStatus(Long badgeId, BadgeMemberStatus status);
 
     Optional<BadgeMember> findByBadgeIdAndUserIdAndStatus(Long badgeId, Long userId, BadgeMemberStatus status);
+
+    boolean existsByUserIdAndStatus(Long userId, BadgeMemberStatus status);
 }
