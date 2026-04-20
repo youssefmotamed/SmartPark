@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "badges")
@@ -58,6 +59,9 @@ public class Badge {
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
+
+    @OneToMany(mappedBy = "badge", fetch = FetchType.LAZY)
+    private List<BadgeMember> badgeMembers;
 
     @PrePersist
     protected void onCreate() {

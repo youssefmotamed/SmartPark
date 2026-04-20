@@ -187,8 +187,11 @@ public class BadgeService {
                 .build();
         badgeCarRepository.save(badgeCar);
 
+        User inviter = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inviter not found"));
+        String inviterFullName = inviter.getFullName();
         notificationService.createNotification(invitedUser.getId(), NotificationType.CARPOOL_INVITE,
-                "Carpool Invitation", "You have been invited to join a carpool badge");
+                "Carpool Invitation", "You have been invited to join a carpool badge by " + inviterFullName + ". Badge ID: " + badgeId + ", Badge Type: " + badge.getBadgeType());
 
         log.info("Badge {} invitation sent to user {} by user {}", badgeId, invitedUser.getId(), currentUserId);
 

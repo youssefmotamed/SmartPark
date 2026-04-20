@@ -331,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     // TODO: fetch full badge details from GET /badges/{id} for member count
 
     return _TappableCard(
-      onTap: () => debugPrint('Navigate to Badges — Phase 5'),
+      onTap: () => context.push('/student/badges'),
       accentLeft: accentColor,
       child: Row(
         children: [

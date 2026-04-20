@@ -1,4 +1,5 @@
-// profile_service.dart — Student profile API call: GET /profile
+// profile_service.dart — Student profile API calls: GET /profile, GET /profile/badges
+import '../models/badge_summary.dart';
 import '../models/user.dart';
 import 'base_api_service.dart';
 
@@ -83,5 +84,15 @@ class ProfileService extends BaseApiService {
   Future<ProfileResponse> getProfile() async {
     final response = await get('/profile');
     return ProfileResponse.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
+  /// Returns all badges belonging to the current student.
+  /// Maps to GET /profile/badges → list of [BadgeSummary].
+  Future<List<BadgeSummary>> getBadges() async {
+    final response = await get('/profile/badges');
+    final list = response['data'] as List<dynamic>;
+    return list
+        .map((e) => BadgeSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }

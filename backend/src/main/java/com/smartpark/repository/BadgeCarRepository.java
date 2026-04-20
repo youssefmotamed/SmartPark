@@ -11,7 +11,7 @@ public interface BadgeCarRepository extends JpaRepository<BadgeCar, Long> {
 
     List<BadgeCar> findByBadgeId(Long badgeId);
 
-    Optional<BadgeCar> findByPlateNumber(String plateNumber);
+    Optional<BadgeCar> findFirstByPlateNumber(String plateNumber);
 
     Optional<BadgeCar> findByBadgeIdAndPlateNumber(Long badgeId, String plateNumber);
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/badge_provider.dart';
 import 'providers/guard_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/points_provider.dart';
@@ -19,6 +20,10 @@ import 'screens/student/points_balance_screen.dart';
 import 'screens/student/points_history_screen.dart';
 import 'screens/student/rewards_screen.dart';
 import 'screens/student/advance_reservation_screen.dart';
+import 'screens/student/badge_list_screen.dart';
+import 'screens/student/badge_detail_screen.dart';
+import 'screens/student/create_badge_screen.dart';
+import 'screens/student/invite_member_screen.dart';
 import 'screens/student/reservation_history_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'screens/guard/guard_shell.dart';
@@ -46,6 +51,7 @@ class SmartParkApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => PointsProvider()),
         ChangeNotifierProvider(create: (_) => RewardsProvider()),
+        ChangeNotifierProvider(create: (_) => BadgeProvider()),
       ],
       child: MaterialApp.router(
         title: 'SmartPark',
@@ -113,6 +119,40 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/student/advance-reservation',
       builder: (_, _) => const AdvanceReservationScreen(),
+    ),
+    GoRoute(
+      path: '/student/badges',
+      builder: (_, _) => const BadgeListScreen(),
+    ),
+    GoRoute(
+      path: '/student/badges/create',
+      builder: (_, _) => const CreateBadgeScreen(),
+    ),
+    GoRoute(
+      path: '/student/badges/:badgeId',
+      builder: (_, state) => BadgeDetailScreen(
+        badgeId: int.parse(state.pathParameters['badgeId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/student/badges/:badgeId/invite',
+      builder: (_, state) => InviteMemberScreen(
+        badgeId: int.parse(state.pathParameters['badgeId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/student/badges/:badgeId/add-car',
+      builder: (_, state) => Scaffold(
+        appBar: AppBar(title: const Text('Add Car')),
+        body: const Center(child: Text('S19 coming soon')),
+      ),
+    ),
+    GoRoute(
+      path: '/student/badges/:badgeId/accept',
+      builder: (_, state) => Scaffold(
+        appBar: AppBar(title: const Text('Invitation')),
+        body: const Center(child: Text('S20 coming soon')),
+      ),
     ),
 
     // ── Guard shell ──────────────────────────────────────────────────────────
