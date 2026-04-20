@@ -35,6 +35,8 @@ import 'screens/guard/guard_shell.dart';
 import 'screens/shared/notification_screen.dart';
 import 'screens/guard/qr_scanner_screen.dart';
 import 'screens/guard/scan_result_screen.dart';
+import 'screens/guard/violation_report_screen.dart';
+import 'screens/guard/spot_override_screen.dart';
 import 'screens/admin/admin_shell.dart';
 
 void main() {
@@ -186,17 +188,11 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/guard/violation',
-      builder: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Report Violation')),
-        body: const Center(child: Text('S26 coming soon')),
-      ),
+      builder: (_, _) => const ViolationReportScreen(),
     ),
     GoRoute(
       path: '/guard/override',
-      builder: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Spot Override')),
-        body: const Center(child: Text('S27 coming soon')),
-      ),
+      builder: (_, _) => const SpotOverrideScreen(),
     ),
 
     // ── Admin shell ──────────────────────────────────────────────────────────

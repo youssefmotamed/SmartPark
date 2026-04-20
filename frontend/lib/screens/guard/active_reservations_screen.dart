@@ -2,6 +2,7 @@
 // guest parking list for the guard. Two tabs: student reservations and
 // guard-created guest entries.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -132,6 +133,11 @@ class _ActiveReservationsScreenState extends State<ActiveReservationsScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.surface,
           elevation: 0,
+          leading: IconButton(
+            icon: const Icon(LucideIcons.arrowLeft,
+                color: AppColors.textSecondary),
+            onPressed: () => context.go('/guard/home'),
+          ),
           title: Text('Active Entries', style: AppTypography.displaySmall),
           centerTitle: true,
           actions: [

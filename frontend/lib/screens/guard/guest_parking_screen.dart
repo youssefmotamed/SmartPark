@@ -72,7 +72,7 @@ class _GuestParkingScreenState extends State<GuestParkingScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      context.pop();
+      context.go('/guard/home');
     }
   }
 
@@ -100,7 +100,7 @@ class _GuestParkingScreenState extends State<GuestParkingScreen> {
         leading: IconButton(
           icon: const Icon(LucideIcons.arrowLeft,
               color: AppColors.textSecondary),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/guard/home'),
         ),
         title: Text('Guest Parking', style: AppTypography.displaySmall),
         centerTitle: true,
