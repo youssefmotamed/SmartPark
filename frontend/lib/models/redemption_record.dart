@@ -20,12 +20,16 @@ class RedemptionRecord {
   /// When the redemption was made.
   final DateTime redeemedAt;
 
+  /// Whether the token has already been consumed (e.g. used for advance reservation).
+  final bool used;
+
   const RedemptionRecord({
     required this.id,
     required this.rewardName,
     this.rewardType,
     required this.pointsDeducted,
     required this.redeemedAt,
+    this.used = false,
   });
 
   factory RedemptionRecord.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,7 @@ class RedemptionRecord {
       rewardType:     json['rewardType']     as String?,
       pointsDeducted: json['pointsDeducted'] as int,
       redeemedAt:     DateTime.parse(json['redeemedAt'] as String),
+      used:           json['used']           as bool? ?? false,
     );
   }
 
@@ -44,5 +49,6 @@ class RedemptionRecord {
     'rewardType':     rewardType,
     'pointsDeducted': pointsDeducted,
     'redeemedAt':     redeemedAt.toIso8601String(),
+    'used':           used,
   };
 }

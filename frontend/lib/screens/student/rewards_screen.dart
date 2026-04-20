@@ -52,11 +52,15 @@ class _RewardsScreenState extends State<RewardsScreen> {
   Future<void> _handleRedeem(Reward reward) async {
     if (mounted) Navigator.of(context).pop();
 
+    final pointsProvider    = context.read<PointsProvider>();
+    final purchasingBadgeId = pointsProvider.balance?.badgeId;
+
     final provider = context.read<RewardsProvider>();
     final success = await provider.redeemReward(
       reward.id,
+      purchasingBadgeId: purchasingBadgeId,
       onSuccess: () {
-        context.read<PointsProvider>().loadBalanceAndSummary();
+        pointsProvider.loadBalanceAndSummary();
       },
     );
 

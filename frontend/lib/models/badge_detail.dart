@@ -36,6 +36,24 @@ class BadgeDetail {
   /// How many car slots are still unfilled.
   int get slotsRemaining => maxSlots - cars.length;
 
+  /// Cars belonging to ACCEPTED members only.
+  /// Matches car ownerName against ACCEPTED member names.
+  List<BadgeCar> get acceptedMemberCars {
+    final acceptedNames = members
+        .where((m) => m.status == 'ACCEPTED' && m.name != null)
+        .map((m) => m.name!)
+        .toSet();
+    return cars.where((c) => acceptedNames.contains(c.ownerName)).toList();
+  }
+
+  /// Number of members who have ACCEPTED (excludes PENDING invitations).
+  int get acceptedMemberCount =>
+      members.where((m) => m.status == 'ACCEPTED').length;
+
+  /// Number of members with PENDING status (invited but not yet accepted).
+  int get pendingMemberCount =>
+      members.where((m) => m.status == 'PENDING').length;
+
   /// Whether this is a carpool badge (not individual).
   bool get isCarpool => badgeType != 'INDIVIDUAL';
 

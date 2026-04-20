@@ -436,7 +436,7 @@ class _BadgeDetailScreenState extends State<BadgeDetailScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Members (${badge.members.length}/${badge.maxSlots})',
+          'Members (${badge.acceptedMemberCount}/${badge.maxSlots})',
           style: AppTypography.labelMedium
               .copyWith(color: AppColors.textSecondary),
         ),

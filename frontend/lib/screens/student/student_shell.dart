@@ -8,6 +8,7 @@ import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/badge_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/notification_bell.dart';
 import 'badge_list_screen.dart';
@@ -68,6 +69,10 @@ class _StudentShellState extends State<StudentShell>
     }).toList();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NotificationProvider>().startPolling();
+      final badgeProvider = context.read<BadgeProvider>();
+      badgeProvider.loadBadges().then(
+        (_) => badgeProvider.loadDefaultBadgePreference(),
+      );
     });
   }
 
@@ -90,7 +95,10 @@ class _StudentShellState extends State<StudentShell>
     final initial = (user?.fullName.isNotEmpty ?? false)
         ? user!.fullName[0].toUpperCase()
         : '?';
-    final points = user?.totalPoints ?? 0;
+    final badgeProvider = context.watch<BadgeProvider>();
+    final points = badgeProvider.defaultBadge?.pointsBalance
+        ?? user?.totalPoints
+        ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,

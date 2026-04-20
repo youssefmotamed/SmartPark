@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../models/badge_summary.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/badge_provider.dart';
 
 /// S15 — Badge List screen.
@@ -68,6 +69,15 @@ class _BadgeListScreenState extends State<BadgeListScreen>
 
   String _capitalize(String s) =>
       s.isEmpty ? s : '${s[0]}${s.substring(1).toLowerCase()}';
+
+  /// Returns true when the current user is a PENDING member of [badge].
+  /// PENDING means they were invited but haven't accepted yet.
+  bool _isPendingMember(BadgeSummary badge, int? currentUserId) {
+    if (currentUserId == null) return false;
+    return badge.members.any(
+      (m) => m.userId == currentUserId && m.status == 'PENDING',
+    );
+  }
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -149,6 +159,9 @@ class _BadgeListScreenState extends State<BadgeListScreen>
       return _buildEmptyState();
     }
 
+    final currentUserId =
+        context.read<AuthProvider>().currentUser?.id;
+
     return RefreshIndicator(
       color: AppColors.primary,
       backgroundColor: AppColors.surface,
@@ -156,11 +169,16 @@ class _BadgeListScreenState extends State<BadgeListScreen>
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         itemCount: provider.badges.length,
-        itemBuilder: (_, i) => _BadgeCard(
-          badge: provider.badges[i],
-          tierColor: _tierColor(provider.badges[i].badgeType),
-          badgeLabel: _badgeLabel(provider.badges[i].badgeType),
-        ),
+        itemBuilder: (_, i) {
+          final badge     = provider.badges[i];
+          final isPending = _isPendingMember(badge, currentUserId);
+          return _BadgeCard(
+            badge:      badge,
+            tierColor:  isPending ? AppColors.warning : _tierColor(badge.badgeType),
+            badgeLabel: _badgeLabel(badge.badgeType),
+            isPending:  isPending,
+          );
+        },
       ),
     );
   }
@@ -228,11 +246,13 @@ class _BadgeCard extends StatelessWidget {
   final BadgeSummary badge;
   final Color        tierColor;
   final String       badgeLabel;
+  final bool         isPending;
 
   const _BadgeCard({
     required this.badge,
     required this.tierColor,
     required this.badgeLabel,
+    this.isPending = false,
   });
 
   Color _statusColor() {
@@ -245,26 +265,48 @@ class _BadgeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isActive     = badge.status == 'ACTIVE';
-    final statusColor  = _statusColor();
-    final slotsOpen    = badge.maxSlots - badge.memberCount;
-    final slotColor    = slotsOpen > 0
+    final isActive    = badge.status == 'ACTIVE';
+    final statusColor = _statusColor();
+    final slotsOpen   = badge.maxSlots - badge.acceptedMemberCount;
+    final slotColor   = slotsOpen > 0
         ? AppColors.warning
         : AppColors.textTertiary;
 
     return GestureDetector(
-      onTap: () => context.push('/student/badges/${badge.badgeId}'),
+      onTap: () => isPending
+          ? context.push('/student/badges/${badge.badgeId}/accept')
+          : context.push('/student/badges/${badge.badgeId}'),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(16),
-          border: isActive
+          border: (isActive || isPending)
               ? Border.all(color: tierColor.withValues(alpha: 0.35), width: 1.5)
               : null,
         ),
         clipBehavior: Clip.antiAlias,
-        child: IntrinsicHeight(
+        child: Column(
+          children: [
+            // Pending invitation banner
+            if (isPending)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                color: AppColors.warning.withAlpha(38),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.mail, size: 14, color: AppColors.warning),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Invitation pending — tap to accept',
+                      style: AppTypography.labelSmall
+                          .copyWith(color: AppColors.warning),
+                    ),
+                  ],
+                ),
+              ),
+            IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -321,12 +363,12 @@ class _BadgeCard extends StatelessWidget {
                           _InfoChip(
                             icon: LucideIcons.users,
                             label:
-                                '${badge.memberCount}/${badge.maxSlots} members',
+                                '${badge.acceptedMemberCount}/${badge.maxSlots} members',
                           ),
                           if (badge.isCarpool)
                             _InfoChip(
                               icon: LucideIcons.car,
-                              label: '$slotsOpen slots open',
+                              label: '${badge.maxSlots - badge.acceptedMemberCount} slots open',
                               color: slotColor,
                             ),
                         ],
@@ -370,6 +412,8 @@ class _BadgeCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+          ],
         ),
       ),
     );

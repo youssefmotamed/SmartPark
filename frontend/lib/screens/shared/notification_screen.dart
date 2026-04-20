@@ -231,7 +231,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final icon      = _iconForType(notification.notificationType);
 
     return GestureDetector(
-      onTap: () => provider.markAsRead(notification.id),
+      onTap: () {
+        provider.markAsRead(notification.id);
+        if (notification.notificationType == 'CARPOOL_INVITE') {
+          final badgeId = _extractBadgeId(notification.message);
+          if (badgeId != null) {
+            context.push('/student/badges/$badgeId/accept');
+          } else {
+            context.push('/student/badges');
+          }
+          return;
+        }
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         margin: const EdgeInsets.only(bottom: 8),
@@ -302,6 +313,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
+
+  /// Extracts badge ID from a CARPOOL_INVITE notification message.
+  /// Expected format: "...Badge ID: {id}, Badge Type: ..."
+  int? _extractBadgeId(String message) {
+    final match = RegExp(r'Badge ID:\s*(\d+)').firstMatch(message);
+    if (match != null) return int.tryParse(match.group(1)!);
+    return null;
+  }
 
   IconData _iconForType(String type) {
     switch (type) {
