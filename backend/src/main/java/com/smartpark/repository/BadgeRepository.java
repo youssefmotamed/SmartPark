@@ -34,4 +34,6 @@ public interface BadgeRepository extends JpaRepository<Badge, Long> {
                                 @Param("badgeType") String badgeType,
                                 @Param("search") String search,
                                 Pageable pageable);
+
+    long countByStatus(BadgeStatus status);
 }

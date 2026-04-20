@@ -1,13 +1,18 @@
-// REST controller for admin user management and badge management endpoints.
+// REST controller for all admin endpoints: users, badges, analytics, violations, rewards, and spots.
 package com.smartpark.controller;
 
 import com.smartpark.dto.request.CreateUserRequest;
 import com.smartpark.dto.request.SuspendBadgeRequest;
 import com.smartpark.dto.request.UpdateBadgeRequest;
+import com.smartpark.dto.request.UpdateRewardRequest;
 import com.smartpark.dto.request.UpdateUserRequest;
 import com.smartpark.dto.response.AdminBadgeResponse;
 import com.smartpark.dto.response.AdminUserResponse;
+import com.smartpark.dto.response.AdminViolationResponse;
+import com.smartpark.dto.response.AnalyticsSummaryResponse;
 import com.smartpark.dto.response.ApiResponse;
+import com.smartpark.dto.response.GuardReservationResponse;
+import com.smartpark.dto.response.RewardResponse;
 import com.smartpark.service.AdminService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -16,8 +21,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
- * Admin-only endpoints for managing users and badges.
+ * Admin-only endpoints for managing users, badges, violations, analytics, rewards, and spots.
  */
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -99,5 +106,41 @@ public class AdminController {
     public ResponseEntity<ApiResponse<AdminBadgeResponse>> unsuspendBadge(@PathVariable Long id) {
         AdminBadgeResponse badge = adminService.unsuspendBadge(id);
         return ResponseEntity.ok(ApiResponse.success(badge, "Badge unsuspended"));
+    }
+
+    @GetMapping("/analytics/summary")
+    public ResponseEntity<ApiResponse<AnalyticsSummaryResponse>> getAnalyticsSummary() {
+        AnalyticsSummaryResponse summary = adminService.getAnalyticsSummary();
+        return ResponseEntity.ok(ApiResponse.success(summary));
+    }
+
+    @GetMapping("/violations")
+    public ResponseEntity<ApiResponse<Page<AdminViolationResponse>>> getViolations(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<AdminViolationResponse> violations = adminService.getViolations(page, size);
+        return ResponseEntity.ok(ApiResponse.success(violations));
+    }
+
+    @PutMapping("/rewards/{id}")
+    public ResponseEntity<ApiResponse<RewardResponse>> updateReward(
+            @PathVariable Long id,
+            @RequestBody UpdateRewardRequest request) {
+        RewardResponse reward = adminService.updateReward(id, request);
+        return ResponseEntity.ok(ApiResponse.success(reward, "Reward updated"));
+    }
+
+    @GetMapping("/reservations/active")
+    public ResponseEntity<ApiResponse<List<GuardReservationResponse>>> getAdminActiveReservations() {
+        List<GuardReservationResponse> reservations = adminService.getAdminActiveReservations();
+        return ResponseEntity.ok(ApiResponse.success(reservations));
+    }
+
+    @PatchMapping("/spots/{spotId}/status")
+    public ResponseEntity<ApiResponse<Void>> updateSpotStatus(
+            @PathVariable Long spotId,
+            @RequestParam String newStatus) {
+        adminService.updateSpotStatus(spotId, newStatus);
+        return ResponseEntity.ok(ApiResponse.success(null, "Spot status updated"));
     }
 }

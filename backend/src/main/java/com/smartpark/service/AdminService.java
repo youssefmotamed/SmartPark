@@ -1,18 +1,25 @@
-// Business logic for admin user management and badge management.
+// Business logic for admin user management, badge management, analytics, violations, rewards, and spot control.
 package com.smartpark.service;
 
 import com.smartpark.dto.request.CreateUserRequest;
 import com.smartpark.dto.request.SuspendBadgeRequest;
 import com.smartpark.dto.request.UpdateBadgeRequest;
+import com.smartpark.dto.request.UpdateRewardRequest;
 import com.smartpark.dto.request.UpdateUserRequest;
 import com.smartpark.dto.response.AdminBadgeResponse;
 import com.smartpark.dto.response.AdminUserResponse;
+import com.smartpark.dto.response.AdminViolationResponse;
+import com.smartpark.dto.response.AnalyticsSummaryResponse;
+import com.smartpark.dto.response.GuardReservationResponse;
+import com.smartpark.dto.response.RewardResponse;
 import com.smartpark.exception.BusinessRuleException;
 import com.smartpark.exception.DuplicateResourceException;
 import com.smartpark.exception.ResourceNotFoundException;
 import com.smartpark.model.Badge;
 import com.smartpark.model.BadgeCar;
 import com.smartpark.model.BadgeMember;
+import com.smartpark.model.Reward;
+import com.smartpark.model.Spot;
 import com.smartpark.model.User;
 import com.smartpark.model.enums.*;
 import com.smartpark.repository.*;
@@ -20,12 +27,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service for admin user management and badge management operations.
@@ -40,6 +53,10 @@ public class AdminService {
     private final BadgeMemberRepository badgeMemberRepository;
     private final BadgeCarRepository badgeCarRepository;
     private final ReservationRepository reservationRepository;
+    private final ViolationRepository violationRepository;
+    private final SpotRepository spotRepository;
+    private final RewardRepository rewardRepository;
+    private final GuestParkingRepository guestParkingRepository;
     private final PasswordEncoder passwordEncoder;
 
     public AdminService(UserRepository userRepository,
@@ -47,12 +64,20 @@ public class AdminService {
                         BadgeMemberRepository badgeMemberRepository,
                         BadgeCarRepository badgeCarRepository,
                         ReservationRepository reservationRepository,
+                        ViolationRepository violationRepository,
+                        SpotRepository spotRepository,
+                        RewardRepository rewardRepository,
+                        GuestParkingRepository guestParkingRepository,
                         PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.badgeRepository = badgeRepository;
         this.badgeMemberRepository = badgeMemberRepository;
         this.badgeCarRepository = badgeCarRepository;
         this.reservationRepository = reservationRepository;
+        this.violationRepository = violationRepository;
+        this.spotRepository = spotRepository;
+        this.rewardRepository = rewardRepository;
+        this.guestParkingRepository = guestParkingRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -277,6 +302,143 @@ public class AdminService {
 
         List<BadgeMember> members = badgeMemberRepository.findByBadgeId(badge.getId());
         return AdminBadgeResponse.fromEntity(badge, members);
+    }
+
+    /**
+     * Returns a real-time snapshot of parking lot occupancy, activity counts, and user totals.
+     */
+    public AnalyticsSummaryResponse getAnalyticsSummary() {
+        long occupied = spotRepository.countByStatus(SpotStatus.OCCUPIED);
+        long reserved = spotRepository.countByStatus(SpotStatus.RESERVED);
+        long available = spotRepository.countByStatus(SpotStatus.AVAILABLE);
+        long unavailable = spotRepository.countByStatus(SpotStatus.UNAVAILABLE);
+        long total = occupied + reserved + available + unavailable;
+
+        double occupancyRate = total == 0 ? 0.0
+                : BigDecimal.valueOf((occupied + reserved) * 100.0 / total)
+                        .setScale(2, RoundingMode.HALF_UP)
+                        .doubleValue();
+
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+
+        long reservationsToday = reservationRepository.countByReservedAtBetween(startOfDay, endOfDay);
+        long violationsToday = violationRepository.countByCreatedAtBetween(startOfDay, endOfDay);
+
+        long activeBadges = badgeRepository.countByStatus(BadgeStatus.ACTIVE);
+        long suspendedBadges = badgeRepository.countByStatus(BadgeStatus.SUSPENDED);
+
+        long totalStudents = userRepository.countByRole(UserRole.STUDENT);
+        long totalGuards = userRepository.countByRole(UserRole.GUARD);
+
+        return AnalyticsSummaryResponse.builder()
+                .totalSpots(total)
+                .occupiedSpots(occupied)
+                .reservedSpots(reserved)
+                .availableSpots(available)
+                .unavailableSpots(unavailable)
+                .occupancyRate(occupancyRate)
+                .reservationsToday(reservationsToday)
+                .violationsToday(violationsToday)
+                .activeBadges(activeBadges)
+                .suspendedBadges(suspendedBadges)
+                .totalStudents(totalStudents)
+                .totalGuards(totalGuards)
+                .build();
+    }
+
+    /**
+     * Returns a paginated list of all violations ordered by most recent first.
+     */
+    public Page<AdminViolationResponse> getViolations(int page, int size) {
+        size = Math.min(size, 100);
+        return violationRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size))
+                .map(AdminViolationResponse::fromEntity);
+    }
+
+    /**
+     * Updates a reward's pointsCost and/or isActive flag. Only non-null fields are applied.
+     */
+    @Transactional
+    public RewardResponse updateReward(Long id, UpdateRewardRequest request) {
+        Reward reward = rewardRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reward not found"));
+
+        if (request.getPointsCost() != null) {
+            reward.setPointsCost(request.getPointsCost());
+        }
+        if (request.getIsActive() != null) {
+            reward.setIsActive(request.getIsActive());
+        }
+
+        reward = rewardRepository.save(reward);
+        return RewardResponse.fromEntity(reward, 0);
+    }
+
+    /**
+     * Returns all currently active student reservations and active guest parking sessions,
+     * using the same structure as the guard's active reservations view.
+     */
+    public List<GuardReservationResponse> getAdminActiveReservations() {
+        List<GuardReservationResponse> result = new ArrayList<>();
+
+        List<ReservationStatus> activeStatuses = List.of(ReservationStatus.ACTIVE, ReservationStatus.ENTERED);
+        reservationRepository.findByStatusIn(activeStatuses).forEach(reservation -> {
+            List<String> plates = badgeCarRepository.findByBadgeId(reservation.getBadge().getId())
+                    .stream()
+                    .map(car -> car.getPlateNumber())
+                    .collect(Collectors.toList());
+
+            result.add(GuardReservationResponse.builder()
+                    .type("RESERVATION")
+                    .id(reservation.getId())
+                    .spotLabel(reservation.getSpot().getSpotLabel())
+                    .zoneCode(reservation.getSpot().getZone().getZoneCode())
+                    .studentName(reservation.getBadge().getCreatedByUser().getFullName())
+                    .badgeType(reservation.getBadge().getBadgeType().toString())
+                    .status(reservation.getStatus().toString())
+                    .reservedAt(reservation.getReservedAt())
+                    .expectedLeaveTime(reservation.getExpectedLeaveTime())
+                    .plateNumbers(plates)
+                    .build());
+        });
+
+        guestParkingRepository.findByStatus("ACTIVE").forEach(gp -> {
+            result.add(GuardReservationResponse.builder()
+                    .type("GUEST")
+                    .id(gp.getId())
+                    .spotLabel(gp.getSpot().getSpotLabel())
+                    .zoneCode(gp.getSpot().getZone().getZoneCode())
+                    .guestPlateNumber(gp.getGuestPlateNumber())
+                    .purpose(gp.getPurpose())
+                    .guardId(gp.getCreatedByGuard().getId())
+                    .createdAt(gp.getCreatedAt())
+                    .build());
+        });
+
+        return result;
+    }
+
+    /**
+     * Directly sets a spot's status to the given value and records the timestamp.
+     */
+    @Transactional
+    public void updateSpotStatus(Long spotId, String newStatus) {
+        Spot spot = spotRepository.findById(spotId)
+                .orElseThrow(() -> new ResourceNotFoundException("Spot not found"));
+
+        SpotStatus status;
+        try {
+            status = SpotStatus.valueOf(newStatus);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessRuleException("INVALID_STATUS", "Invalid spot status");
+        }
+
+        spot.setStatus(status);
+        spot.setStatusUpdatedAt(LocalDateTime.now());
+        spotRepository.save(spot);
+
+        log.info("Admin set spot {} status to {}", spot.getSpotLabel(), status);
     }
 
     private int maxSlotsForType(BadgeType type) {

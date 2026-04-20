@@ -47,4 +47,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     Optional<Reservation> findFirstByBadgeIdAndStatusInOrderByReservedAtDesc(Long badgeId, List<ReservationStatus> statuses);
 
     boolean existsByUserIdAndStatusIn(Long userId, List<ReservationStatus> statuses);
+
+    long countByReservedAtBetween(LocalDateTime start, LocalDateTime end);
 }

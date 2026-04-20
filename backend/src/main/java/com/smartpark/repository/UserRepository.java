@@ -37,4 +37,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
                                @Param("isActive") Boolean isActive,
                                @Param("search") String search,
                                Pageable pageable);
+
+    long countByRole(UserRole role);
 }
