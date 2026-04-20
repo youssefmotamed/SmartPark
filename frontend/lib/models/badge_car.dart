@@ -17,8 +17,8 @@ class BadgeCar {
 
   factory BadgeCar.fromJson(Map<String, dynamic> json) {
     return BadgeCar(
-      plate:     json['plate']     as String,
-      ownerName: json['ownerName'] as String,
+      plate:     json['plate'] as String,
+      ownerName: (json['ownerName'] ?? json['owner'] ?? '') as String,
     );
   }
 

@@ -1,5 +1,6 @@
 // badge_provider.dart — Manages badge list, detail, and all badge operations for Phase 5
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/badge_detail.dart';
 import '../models/badge_reservation.dart';
 import '../models/badge_summary.dart';
@@ -31,6 +32,9 @@ class BadgeProvider extends ChangeNotifier {
   bool              _isLoadingReservation = false;
   bool              _hasNoReservation     = false;
 
+  // ── Default badge preference ──────────────────────────────────────────────
+  int? _defaultBadgeId; // null means "use first active badge"
+
   // ── Mutation flags ────────────────────────────────────────────────────────
   bool    _isCreating   = false;
   bool    _isInviting   = false;
@@ -56,6 +60,20 @@ class BadgeProvider extends ChangeNotifier {
   bool               get isAddingCar          => _isAddingCar;
   bool               get isAccepting          => _isAccepting;
   String?            get operationError       => _operationError;
+
+  int?          get defaultBadgeId => _defaultBadgeId;
+
+  /// Returns the user's preferred default badge.
+  /// Falls back to the first ACTIVE badge, then the first badge in the list.
+  BadgeSummary? get defaultBadge {
+    if (_badges.isEmpty) return null;
+    if (_defaultBadgeId != null) {
+      final match = _badges.where((b) => b.badgeId == _defaultBadgeId).firstOrNull;
+      if (match != null) return match;
+    }
+    final active = _badges.where((b) => b.status == 'ACTIVE').firstOrNull;
+    return active ?? _badges.first;
+  }
 
   /// The ACTIVE badge from the list, or null if none exists.
   BadgeSummary? get activeBadge =>
@@ -247,7 +265,9 @@ class BadgeProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await BadgeService().acceptInvitation(badgeId);
-      await loadBadges();
+      // Fire-and-forget so navigation happens immediately.
+      // S15 will show the updated badge list when the user navigates back.
+      loadBadges();
       return true;
     } on ApiException catch (e) {
       _operationError = e.toString();
@@ -269,6 +289,24 @@ class BadgeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Default badge preference ───────────────────────────────────────────────
+
+  /// Sets the user's preferred default badge and persists it to SharedPreferences.
+  Future<void> setDefaultBadge(int badgeId) async {
+    _defaultBadgeId = badgeId;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('default_badge_id', badgeId);
+  }
+
+  /// Loads the saved default badge preference from SharedPreferences.
+  /// Call once after loadBadges() on app start.
+  Future<void> loadDefaultBadgePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    _defaultBadgeId = prefs.getInt('default_badge_id');
+    notifyListeners();
+  }
+
   /// Resets all state. Call on logout.
   void reset() {
     _badges               = [];
@@ -285,6 +323,8 @@ class BadgeProvider extends ChangeNotifier {
     _badgesError          = null;
     _detailError          = null;
     _operationError       = null;
+    _defaultBadgeId       = null;
+    SharedPreferences.getInstance().then((p) => p.remove('default_badge_id'));
     notifyListeners();
   }
 }

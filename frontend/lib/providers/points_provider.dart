@@ -23,6 +23,9 @@ class PointsProvider extends ChangeNotifier {
   bool            _isLoadingBalance  = false;
   bool            _isLoadingSummary  = false;
 
+  // ── Active badge context ──────────────────────────────────────────────────
+  int? _badgeId; // null = backend uses whatever it considers active
+
   // ── History ───────────────────────────────────────────────────────────────
   List<PointsTransaction> _transactions  = [];
   bool                    _isLoadingHistory = false;
@@ -48,8 +51,12 @@ class PointsProvider extends ChangeNotifier {
 
   // ── Balance + summary ─────────────────────────────────────────────────────
 
-  /// Loads balance and summary in parallel. Call when the Points screen opens.
-  Future<void> loadBalanceAndSummary() async {
+  /// Loads balance and summary in parallel for [badgeId].
+  ///
+  /// Pass [badgeId] to scope data to the user's selected default badge.
+  /// The badge ID is stored so [loadHistory] and pagination use the same badge.
+  Future<void> loadBalanceAndSummary({int? badgeId}) async {
+    _badgeId          = badgeId;
     _isLoadingBalance = true;
     _isLoadingSummary = true;
     _error = null;
@@ -57,8 +64,8 @@ class PointsProvider extends ChangeNotifier {
 
     try {
       final results = await Future.wait([
-        _service.getBalance(),
-        _service.getSummary(),
+        _service.getBalance(badgeId: badgeId),
+        _service.getSummary(badgeId: badgeId),
       ]);
       _balance = results[0] as PointsBalance;
       _summary = results[1] as PointsSummary;
@@ -76,9 +83,12 @@ class PointsProvider extends ChangeNotifier {
 
   // ── History ───────────────────────────────────────────────────────────────
 
-  /// Loads page 0 of transaction history, resetting any previous data.
-  /// Respects the current [selectedFilter].
-  Future<void> loadHistory() async {
+  /// Loads page 0 of transaction history for [badgeId], resetting any previous data.
+  ///
+  /// If [badgeId] is omitted, uses the stored badge ID from the last
+  /// [loadBalanceAndSummary] call. Respects the current [selectedFilter].
+  Future<void> loadHistory({int? badgeId}) async {
+    if (badgeId != null) _badgeId = badgeId;
     _isLoadingHistory = true;
     _currentPage      = 0;
     _transactions     = [];
@@ -86,7 +96,11 @@ class PointsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data  = await _service.getHistory(type: _selectedFilter, page: 0);
+      final data  = await _service.getHistory(
+        type:    _selectedFilter,
+        badgeId: _badgeId,
+        page:    0,
+      );
       final items = _service.parseTransactions(data);
       _transactions = items;
       _currentPage  = (data['number'] as num?)?.toInt() ?? 0;
@@ -111,8 +125,9 @@ class PointsProvider extends ChangeNotifier {
 
     try {
       final data  = await _service.getHistory(
-        type: _selectedFilter,
-        page: _currentPage + 1,
+        type:    _selectedFilter,
+        badgeId: _badgeId,
+        page:    _currentPage + 1,
       );
       final items = _service.parseTransactions(data);
       _transactions.addAll(items);
@@ -141,6 +156,7 @@ class PointsProvider extends ChangeNotifier {
 
   /// Resets all state. Call on logout.
   void reset() {
+    _badgeId          = null;
     _balance          = null;
     _summary          = null;
     _transactions     = [];

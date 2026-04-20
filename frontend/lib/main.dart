@@ -24,6 +24,8 @@ import 'screens/student/badge_list_screen.dart';
 import 'screens/student/badge_detail_screen.dart';
 import 'screens/student/create_badge_screen.dart';
 import 'screens/student/invite_member_screen.dart';
+import 'screens/student/add_car_screen.dart';
+import 'screens/student/invitation_screen.dart';
 import 'screens/student/reservation_history_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'screens/guard/guard_shell.dart';
@@ -142,16 +144,14 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/student/badges/:badgeId/add-car',
-      builder: (_, state) => Scaffold(
-        appBar: AppBar(title: const Text('Add Car')),
-        body: const Center(child: Text('S19 coming soon')),
+      builder: (_, state) => AddCarScreen(
+        badgeId: int.parse(state.pathParameters['badgeId']!),
       ),
     ),
     GoRoute(
       path: '/student/badges/:badgeId/accept',
-      builder: (_, state) => Scaffold(
-        appBar: AppBar(title: const Text('Invitation')),
-        body: const Center(child: Text('S20 coming soon')),
+      builder: (_, state) => InvitationScreen(
+        badgeId: int.parse(state.pathParameters['badgeId']!),
       ),
     ),
 

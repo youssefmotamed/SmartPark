@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../models/points_transaction.dart';
+import '../../providers/badge_provider.dart';
 import '../../providers/points_provider.dart';
 
 /// S11 — Points History screen.
@@ -34,7 +35,8 @@ class _PointsHistoryScreenState extends State<PointsHistoryScreen> {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PointsProvider>().loadHistory();
+      final badgeId = context.read<BadgeProvider>().defaultBadge?.badgeId;
+      context.read<PointsProvider>().loadHistory(badgeId: badgeId);
     });
   }
 

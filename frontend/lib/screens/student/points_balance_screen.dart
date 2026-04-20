@@ -8,6 +8,7 @@ import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
 import '../../models/points_balance.dart';
 import '../../models/points_summary.dart';
+import '../../providers/badge_provider.dart';
 import '../../providers/points_provider.dart';
 
 /// S10 — Points Balance screen.
@@ -39,7 +40,8 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
       duration: const Duration(milliseconds: 600),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PointsProvider>().loadBalanceAndSummary().then((_) {
+      final badgeId = context.read<BadgeProvider>().defaultBadge?.badgeId;
+      context.read<PointsProvider>().loadBalanceAndSummary(badgeId: badgeId).then((_) {
         if (mounted) _animController.forward();
       });
     });
@@ -139,7 +141,25 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
 
   // ── Loaded content ────────────────────────────────────────────────────────────
 
+  double _multiplierFromType(String badgeType) {
+    switch (badgeType) {
+      case 'CARPOOL_2': return 1.2;
+      case 'CARPOOL_3': return 1.4;
+      case 'CARPOOL_4': return 1.6;
+      case 'CARPOOL_5': return 1.8;
+      default:          return 1.0;
+    }
+  }
+
   Widget _buildContent(PointsBalance balance, PointsSummary summary) {
+    // Override balance display with the user's selected default badge
+    final defaultBadge = context.watch<BadgeProvider>().defaultBadge;
+    final displayBalance = defaultBadge?.pointsBalance ?? balance.pointsBalance;
+    final displayType    = defaultBadge?.badgeType     ?? balance.badgeType;
+    final displayMult    = defaultBadge != null
+        ? _multiplierFromType(defaultBadge.badgeType)
+        : balance.multiplier;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.screenH,
@@ -151,7 +171,7 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 24),
-            _buildHero(balance),
+            _buildHero(displayBalance, displayType, displayMult),
             const SizedBox(height: 32),
             _buildSummaryRow(summary),
             const SizedBox(height: 32),
@@ -165,8 +185,8 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
 
   // ── Hero section ──────────────────────────────────────────────────────────────
 
-  Widget _buildHero(PointsBalance balance) {
-    final tierColor = _tierColor(balance.badgeType);
+  Widget _buildHero(int pointsBalance, String badgeType, double multiplier) {
+    final tierColor = _tierColor(badgeType);
 
     return Column(
       children: [
@@ -187,16 +207,15 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Points number
               TweenAnimationBuilder<int>(
-                tween: IntTween(begin: 0, end: balance.pointsBalance),
+                tween: IntTween(begin: 0, end: pointsBalance),
                 duration: const Duration(milliseconds: 800),
                 curve: Curves.easeOutCubic,
                 builder: (_, value, _) => Text(
                   '$value',
                   style: AppTypography.displayLarge.copyWith(
-                    fontSize:   56,
-                    color:      AppColors.primary,
+                    fontSize:      56,
+                    color:         AppColors.primary,
                     letterSpacing: -1,
                   ),
                 ),
@@ -222,7 +241,7 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
             border: Border.all(color: tierColor.withValues(alpha: 0.3)),
           ),
           child: Text(
-            '${_tierLabel(balance.badgeType)} · ${_multiplierLabel(balance.multiplier)} multiplier',
+            '${_tierLabel(badgeType)} · ${_multiplierLabel(multiplier)} multiplier',
             style: AppTypography.labelSmall.copyWith(color: tierColor),
           ),
         ),
