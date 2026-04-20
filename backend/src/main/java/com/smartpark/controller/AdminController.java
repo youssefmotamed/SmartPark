@@ -5,6 +5,7 @@ import com.smartpark.dto.request.CreateUserRequest;
 import com.smartpark.dto.request.SuspendBadgeRequest;
 import com.smartpark.dto.request.UpdateBadgeRequest;
 import com.smartpark.dto.request.UpdateRewardRequest;
+import com.smartpark.dto.request.UpdateSpotStatusRequest;
 import com.smartpark.dto.request.UpdateUserRequest;
 import com.smartpark.dto.response.AdminBadgeResponse;
 import com.smartpark.dto.response.AdminUserResponse;
@@ -139,8 +140,8 @@ public class AdminController {
     @PatchMapping("/spots/{spotId}/status")
     public ResponseEntity<ApiResponse<Void>> updateSpotStatus(
             @PathVariable Long spotId,
-            @RequestParam String newStatus) {
-        adminService.updateSpotStatus(spotId, newStatus);
+            @Valid @RequestBody UpdateSpotStatusRequest request) {
+        adminService.updateSpotStatus(spotId, request.getNewStatus());
         return ResponseEntity.ok(ApiResponse.success(null, "Spot status updated"));
     }
 }
