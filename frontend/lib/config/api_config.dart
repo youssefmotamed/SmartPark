@@ -7,7 +7,7 @@ class ApiConfig {
   const ApiConfig._();
 
   /// Backend base URL (Android emulator → host localhost).
-  static const String baseUrl = 'http://192.168.1.20:8080/api/v1';
+  static const String baseUrl = 'http://10.0.2.2:8080/api/v1';
 
   /// HTTP request timeout in seconds.
   static const int timeoutSeconds = 30;

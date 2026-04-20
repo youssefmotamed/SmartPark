@@ -29,6 +29,8 @@ import 'screens/student/add_car_screen.dart';
 import 'screens/student/invitation_screen.dart';
 import 'screens/student/reservation_history_screen.dart';
 import 'screens/student/student_shell.dart';
+import 'screens/guard/active_reservations_screen.dart';
+import 'screens/guard/guest_parking_screen.dart';
 import 'screens/guard/guard_shell.dart';
 import 'screens/shared/notification_screen.dart';
 import 'screens/guard/qr_scanner_screen.dart';
@@ -173,6 +175,28 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/guard/notifications',
       builder: (_, _) => const NotificationScreen(),
+    ),
+    GoRoute(
+      path: '/guard/active',
+      builder: (_, _) => const ActiveReservationsScreen(),
+    ),
+    GoRoute(
+      path: '/guard/guest-parking',
+      builder: (_, _) => const GuestParkingScreen(),
+    ),
+    GoRoute(
+      path: '/guard/violation',
+      builder: (_, _) => Scaffold(
+        appBar: AppBar(title: const Text('Report Violation')),
+        body: const Center(child: Text('S26 coming soon')),
+      ),
+    ),
+    GoRoute(
+      path: '/guard/override',
+      builder: (_, _) => Scaffold(
+        appBar: AppBar(title: const Text('Spot Override')),
+        body: const Center(child: Text('S27 coming soon')),
+      ),
     ),
 
     // ── Admin shell ──────────────────────────────────────────────────────────
