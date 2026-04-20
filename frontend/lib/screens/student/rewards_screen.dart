@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../models/reward.dart';
+import '../../providers/badge_provider.dart';
 import '../../providers/points_provider.dart';
 import '../../providers/rewards_provider.dart';
 import '../../widgets/redeem_confirmation_sheet.dart';
@@ -27,14 +28,26 @@ class _RewardsScreenState extends State<RewardsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<RewardsProvider>().loadRewards();
-      final points = context.read<PointsProvider>();
-      if (points.balance == null) points.loadBalanceAndSummary();
+      final badgeProvider = context.read<BadgeProvider>();
+      if (badgeProvider.badges.isEmpty) {
+        badgeProvider.loadBadges().then((_) => badgeProvider.loadDefaultBadgePreference());
+      }
     });
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /// Returns true if the default badge has enough points for this reward.
+  bool _canAfford(Reward reward) {
+    final balance = context.read<BadgeProvider>().defaultBadge?.pointsBalance ?? 0;
+    return balance >= reward.pointsCost;
   }
 
   // ── Redeem flow ───────────────────────────────────────────────────────────
 
-  Future<void> _showRedeemSheet(Reward reward, int balance) async {
+  Future<void> _showRedeemSheet(Reward reward) async {
+    final currentBalance =
+        context.read<BadgeProvider>().defaultBadge?.pointsBalance ?? 0;
     await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: AppColors.surfaceLight,
@@ -43,7 +56,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
       ),
       builder: (_) => RedeemConfirmationSheet(
         reward: reward,
-        currentBalance: balance,
+        currentBalance: currentBalance,
         onConfirm: () => _handleRedeem(reward),
       ),
     );
@@ -52,15 +65,17 @@ class _RewardsScreenState extends State<RewardsScreen> {
   Future<void> _handleRedeem(Reward reward) async {
     if (mounted) Navigator.of(context).pop();
 
-    final pointsProvider    = context.read<PointsProvider>();
-    final purchasingBadgeId = pointsProvider.balance?.badgeId;
+    final badgeProvider     = context.read<BadgeProvider>();
+    final purchasingBadgeId = badgeProvider.defaultBadge?.badgeId;
 
     final provider = context.read<RewardsProvider>();
     final success = await provider.redeemReward(
       reward.id,
       purchasingBadgeId: purchasingBadgeId,
       onSuccess: () {
-        pointsProvider.loadBalanceAndSummary();
+        // Refresh badges so pointsBalance updates everywhere
+        badgeProvider.loadBadges();
+        context.read<PointsProvider>().loadBalanceAndSummary();
       },
     );
 
@@ -92,8 +107,8 @@ class _RewardsScreenState extends State<RewardsScreen> {
   @override
   Widget build(BuildContext context) {
     final rewardsProvider = context.watch<RewardsProvider>();
-    final pointsProvider  = context.watch<PointsProvider>();
-    final balance         = pointsProvider.balance?.pointsBalance;
+    final defaultBadge    = context.watch<BadgeProvider>().defaultBadge;
+    final displayBalance  = defaultBadge?.pointsBalance;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -114,8 +129,8 @@ class _RewardsScreenState extends State<RewardsScreen> {
       ),
       body: Column(
         children: [
-          _buildBalanceHeader(balance),
-          Expanded(child: _buildBody(rewardsProvider, balance ?? 0)),
+          _buildBalanceHeader(displayBalance),
+          Expanded(child: _buildBody(rewardsProvider)),
         ],
       ),
     );
@@ -157,7 +172,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
 
   // ── Body ──────────────────────────────────────────────────────────────────
 
-  Widget _buildBody(RewardsProvider provider, int balance) {
+  Widget _buildBody(RewardsProvider provider) {
     if (provider.isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
@@ -213,7 +228,8 @@ class _RewardsScreenState extends State<RewardsScreen> {
         ...provider.rewards.map(
           (r) => _RewardCard(
             reward: r,
-            onRedeem: () => _showRedeemSheet(r, balance),
+            canAfford: _canAfford(r),
+            onRedeem: () => _showRedeemSheet(r),
           ),
         ),
         _ComingSoonCard(),
@@ -229,9 +245,14 @@ class _RewardsScreenState extends State<RewardsScreen> {
 
 class _RewardCard extends StatelessWidget {
   final Reward reward;
+  final bool canAfford;
   final VoidCallback onRedeem;
 
-  const _RewardCard({required this.reward, required this.onRedeem});
+  const _RewardCard({
+    required this.reward,
+    required this.canAfford,
+    required this.onRedeem,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -327,7 +348,7 @@ class _RewardCard extends StatelessWidget {
       );
     }
 
-    if (!reward.canAfford) {
+    if (!canAfford) {
       return OutlinedButton(
         onPressed: null,
         style: OutlinedButton.styleFrom(

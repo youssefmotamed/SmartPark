@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
-import '../../models/points_balance.dart';
 import '../../models/points_summary.dart';
 import '../../providers/badge_provider.dart';
 import '../../providers/points_provider.dart';
@@ -40,10 +39,16 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
       duration: const Duration(milliseconds: 600),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final badgeId = context.read<BadgeProvider>().defaultBadge?.badgeId;
-      context.read<PointsProvider>().loadBalanceAndSummary(badgeId: badgeId).then((_) {
-        if (mounted) _animController.forward();
-      });
+      final badgeProvider = context.read<BadgeProvider>();
+      if (badgeProvider.badges.isEmpty) {
+        badgeProvider.loadBadges().then((_) {
+          badgeProvider.loadDefaultBadgePreference();
+          if (mounted) _animController.forward();
+        });
+      } else {
+        _animController.forward();
+      }
+      context.read<PointsProvider>().loadBalanceAndSummary();
     });
   }
 
@@ -75,8 +80,9 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<PointsProvider>();
-    final loading  = provider.isLoadingBalance || provider.isLoadingSummary;
+    final badgeProvider  = context.watch<BadgeProvider>();
+    final pointsProvider = context.watch<PointsProvider>();
+    final defaultBadge   = badgeProvider.defaultBadge;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -98,15 +104,24 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
             )
           : null,
       body: () {
-        if (loading && provider.balance == null) {
+        if (badgeProvider.isLoadingBadges && badgeProvider.badges.isEmpty) {
           return const Center(
             child: CircularProgressIndicator(color: AppColors.primary),
           );
         }
-        if (provider.error != null && provider.balance == null) {
-          return _buildError(provider);
+        if (pointsProvider.error != null && defaultBadge == null) {
+          return _buildError(pointsProvider);
         }
-        return _buildContent(provider.balance!, provider.summary!);
+        final displayBalance = defaultBadge?.pointsBalance ?? 0;
+        final displayType    = defaultBadge?.badgeType ?? 'INDIVIDUAL';
+        final displayMult    = _multiplierFromType(displayType);
+        return _buildContent(
+          displayBalance,
+          displayType,
+          displayMult,
+          pointsProvider.summary,
+          pointsProvider.isLoadingSummary,
+        );
       }(),
     );
   }
@@ -151,15 +166,13 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
     }
   }
 
-  Widget _buildContent(PointsBalance balance, PointsSummary summary) {
-    // Override balance display with the user's selected default badge
-    final defaultBadge = context.watch<BadgeProvider>().defaultBadge;
-    final displayBalance = defaultBadge?.pointsBalance ?? balance.pointsBalance;
-    final displayType    = defaultBadge?.badgeType     ?? balance.badgeType;
-    final displayMult    = defaultBadge != null
-        ? _multiplierFromType(defaultBadge.badgeType)
-        : balance.multiplier;
-
+  Widget _buildContent(
+    int displayBalance,
+    String displayType,
+    double displayMult,
+    PointsSummary? summary,
+    bool isLoadingSummary,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.screenH,
@@ -173,7 +186,7 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
             const SizedBox(height: 24),
             _buildHero(displayBalance, displayType, displayMult),
             const SizedBox(height: 32),
-            _buildSummaryRow(summary),
+            _buildSummaryRow(summary, isLoadingSummary),
             const SizedBox(height: 32),
             _buildActions(),
             const SizedBox(height: 24),
@@ -251,7 +264,18 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
 
   // ── Summary row ───────────────────────────────────────────────────────────────
 
-  Widget _buildSummaryRow(PointsSummary summary) {
+  Widget _buildSummaryRow(PointsSummary? summary, bool isLoading) {
+    if (isLoading || summary == null) {
+      return const SizedBox(
+        height: 80,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
     return Row(
       children: [
         Expanded(child: _SummaryCard(

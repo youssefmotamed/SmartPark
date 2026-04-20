@@ -171,7 +171,13 @@ class _ProfileScreenState extends State<ProfileScreen>
             const SizedBox(height: AppSpacing.md),
 
             // ── 3 · Points card ────────────────────────────────────────────
-            _animated(_buildPointsCard(p.totalPoints), delayMs: 160),
+            _animated(
+              _buildPointsCard(
+                context.watch<BadgeProvider>().defaultBadge?.pointsBalance ??
+                    p.totalPoints,
+              ),
+              delayMs: 160,
+            ),
             const SizedBox(height: AppSpacing.sm + 4),
 
             // ── 4 · Badge card (default badge selector) ───────────────────
@@ -462,6 +468,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   : null,
               onTap: () {
                 bp.setDefaultBadge(badge.badgeId);
+                bp.loadBadges();
                 Navigator.pop(context);
               },
             );
