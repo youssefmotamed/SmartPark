@@ -98,12 +98,7 @@ class _SpotDetailSheetState extends State<SpotDetailSheet> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => ReservationDialog(
-        spot:                 widget.spot,
-        badgeId:              _badgeId!,
-        badgeType:            _badgeType ?? 'INDIVIDUAL',
-        isAdvanceReservation: widget.isAdvanceReservation,
-      ),
+      builder: (_) => ReservationDialog(spot: widget.spot),
     );
   }
 

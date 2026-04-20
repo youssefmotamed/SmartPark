@@ -15,4 +15,6 @@ public interface SpotRepository extends JpaRepository<Spot, Long> {
     List<Spot> findByStatus(SpotStatus status);
 
     Optional<Spot> findBySpotLabel(String spotLabel);
+
+    long countByStatus(SpotStatus status);
 }

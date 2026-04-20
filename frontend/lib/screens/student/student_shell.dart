@@ -8,8 +8,10 @@ import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/badge_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/notification_bell.dart';
+import 'badge_list_screen.dart';
 import 'student_home_screen.dart';
 import 'points_balance_screen.dart';
 import 'profile_screen.dart';
@@ -42,7 +44,7 @@ class _StudentShellState extends State<StudentShell>
   static final _screens = [
     const StudentHomeScreen(),
     const PointsBalanceScreen(showAppBar: false),
-    const _TabPlaceholder(title: 'Badge',   icon: LucideIcons.shield, note: 'Coming in Phase 3'),
+    const BadgeListScreen(showAppBar: false),
     const ProfileScreen(),
   ];
 
@@ -67,6 +69,10 @@ class _StudentShellState extends State<StudentShell>
     }).toList();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NotificationProvider>().startPolling();
+      final badgeProvider = context.read<BadgeProvider>();
+      badgeProvider.loadBadges().then(
+        (_) => badgeProvider.loadDefaultBadgePreference(),
+      );
     });
   }
 
@@ -89,7 +95,10 @@ class _StudentShellState extends State<StudentShell>
     final initial = (user?.fullName.isNotEmpty ?? false)
         ? user!.fullName[0].toUpperCase()
         : '?';
-    final points = user?.totalPoints ?? 0;
+    final badgeProvider = context.watch<BadgeProvider>();
+    final points = badgeProvider.defaultBadge?.pointsBalance
+        ?? user?.totalPoints
+        ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -346,45 +355,4 @@ class _NavItem {
   final IconData icon;
   final String label;
   const _NavItem({required this.icon, required this.label});
-}
-
-
-/// Generic placeholder for tabs not yet implemented.
-class _TabPlaceholder extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final String note;
-
-  const _TabPlaceholder({
-    required this.title,
-    required this.icon,
-    required this.note,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.primaryGlow,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(icon, size: 36, color: AppColors.primary),
-            ),
-            const SizedBox(height: 20),
-            Text(title, style: AppTypography.displaySmall),
-            const SizedBox(height: 8),
-            Text(note, style: AppTypography.bodyMedium),
-          ],
-        ),
-      ),
-    );
-  }
 }

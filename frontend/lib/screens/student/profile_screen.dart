@@ -7,7 +7,9 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
+import '../../models/badge_summary.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/badge_provider.dart';
 import '../../services/base_api_service.dart';
 import '../../services/profile_service.dart';
 
@@ -38,6 +40,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       duration: const Duration(milliseconds: 400),
     );
     _loadProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final bp = context.read<BadgeProvider>();
+      if (bp.badges.isEmpty) {
+        bp.loadBadges().then((_) => bp.loadDefaultBadgePreference());
+      }
+    });
   }
 
   @override
@@ -93,28 +101,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       opacity: opacity,
       child: SlideTransition(position: slide, child: child),
     );
-  }
-
-  // ── Badge helpers ─────────────────────────────────────────────────────────────
-
-  Color _badgeBorderColor(String? type) {
-    switch (type) {
-      case 'CARPOOL_2': return AppColors.carpool2;
-      case 'CARPOOL_3': return AppColors.carpool3;
-      case 'CARPOOL_4': return AppColors.carpool4;
-      case 'CARPOOL_5': return AppColors.carpool5;
-      default:          return AppColors.individual;
-    }
-  }
-
-  String _badgeDisplayName(String? type) {
-    switch (type) {
-      case 'CARPOOL_2': return 'Carpool 2';
-      case 'CARPOOL_3': return 'Carpool 3';
-      case 'CARPOOL_4': return 'Carpool 4';
-      case 'CARPOOL_5': return 'Carpool 5';
-      default:          return 'Individual';
-    }
   }
 
   // ── Build ────────────────────────────────────────────────────────────────────
@@ -188,8 +174,8 @@ class _ProfileScreenState extends State<ProfileScreen>
             _animated(_buildPointsCard(p.totalPoints), delayMs: 160),
             const SizedBox(height: AppSpacing.sm + 4),
 
-            // ── 4 · Badge card ─────────────────────────────────────────────
-            _animated(_buildBadgeCard(p.activeBadge), delayMs: 240),
+            // ── 4 · Badge card (default badge selector) ───────────────────
+            _animated(_buildBadgeSelectorCard(context), delayMs: 240),
             const SizedBox(height: AppSpacing.sm + 4),
 
             // ── 5 · History button ─────────────────────────────────────────
@@ -321,58 +307,190 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildBadgeCard(ActiveBadgeInfo? badge) {
-    final type        = badge?.type;
-    final status      = badge?.status ?? 'ACTIVE';
-    final accentColor = _badgeBorderColor(type);
-    final displayName = _badgeDisplayName(type);
-    final isActive    = status == 'ACTIVE';
+  // ── Badge selector card ────────────────────────────────────────────────────
 
-    // TODO: fetch full badge details from GET /badges/{id} for member count
+  Widget _buildBadgeSelectorCard(BuildContext context) {
+    final bp           = context.watch<BadgeProvider>();
+    final defaultBadge = bp.defaultBadge;
+    final allBadges    = bp.badges;
+    final canChange    = allBadges.length > 1;
+    final accentColor  = defaultBadge != null
+        ? _badgeTierColor(defaultBadge.badgeType)
+        : AppColors.textTertiary;
 
-    return _TappableCard(
-      onTap: () => debugPrint('Navigate to Badges — Phase 5'),
-      accentLeft: accentColor,
-      child: Row(
+    if (defaultBadge == null) {
+      return _TappableCard(
+        onTap: () => context.push('/student/badges'),
+        child: Row(
+          children: [
+            const Icon(LucideIcons.creditCard, size: 18, color: AppColors.textTertiary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text('No active badge',
+                  style: AppTypography.bodyMedium
+                      .copyWith(color: AppColors.textTertiary)),
+            ),
+            const Icon(LucideIcons.chevronRight, size: 20, color: AppColors.textTertiary),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: canChange
+          ? () => _showBadgePicker(context, allBadges, bp.defaultBadgeId)
+          : null,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(color: AppColors.divider),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 4, color: accentColor),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.cardPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(_formatBadgeType(defaultBadge.badgeType),
+                              style: AppTypography.labelMedium),
+                          const Spacer(),
+                          if (canChange)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text('Change',
+                                  style: AppTypography.labelSmall
+                                      .copyWith(color: AppColors.primary)),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${defaultBadge.acceptedMemberCount}/${defaultBadge.maxSlots} members'
+                        ' · ${defaultBadge.pointsBalance} pts',
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Default badge',
+                          style: AppTypography.labelSmall
+                              .copyWith(color: AppColors.textTertiary)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBadgePicker(
+    BuildContext context,
+    List<BadgeSummary> badges,
+    int? currentDefaultId,
+  ) {
+    final bp = context.read<BadgeProvider>();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surfaceLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(LucideIcons.creditCard, size: 18, color: accentColor),
-                    const SizedBox(width: 8),
-                    Text(displayName, style: AppTypography.labelMedium),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: isActive ? AppColors.success : AppColors.textTertiary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      isActive ? 'Active' : status,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: isActive ? AppColors.success : AppColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.divider,
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Icon(LucideIcons.chevronRight, size: 20, color: AppColors.textTertiary),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text('Select Default Badge',
+                style: AppTypography.displaySmall),
+          ),
+          const SizedBox(height: 8),
+          ...badges.map((badge) {
+            final effectiveDefaultId = currentDefaultId ??
+                badges
+                    .where((b) => b.status == 'ACTIVE')
+                    .firstOrNull
+                    ?.badgeId;
+            final isSelected = badge.badgeId == effectiveDefaultId;
+            final tierColor  = _badgeTierColor(badge.badgeType);
+            return ListTile(
+              leading: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: tierColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              title: Text(_formatBadgeType(badge.badgeType),
+                  style: AppTypography.bodyMedium
+                      .copyWith(color: AppColors.textPrimary)),
+              subtitle: Text(
+                '${badge.pointsBalance} pts'
+                ' · ${badge.acceptedMemberCount}/${badge.maxSlots} members'
+                ' · ${badge.status}',
+                style: AppTypography.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+              trailing: isSelected
+                  ? const Icon(LucideIcons.check,
+                      color: AppColors.primary, size: 20)
+                  : null,
+              onTap: () {
+                bp.setDefaultBadge(badge.badgeId);
+                Navigator.pop(context);
+              },
+            );
+          }),
+          const SizedBox(height: 16),
         ],
       ),
     );
+  }
+
+  Color _badgeTierColor(String badgeType) {
+    switch (badgeType) {
+      case 'CARPOOL_2': return AppColors.carpool2;
+      case 'CARPOOL_3': return AppColors.carpool3;
+      case 'CARPOOL_4': return AppColors.carpool4;
+      case 'CARPOOL_5': return AppColors.carpool5;
+      default:          return AppColors.individual;
+    }
+  }
+
+  String _formatBadgeType(String badgeType) {
+    switch (badgeType) {
+      case 'INDIVIDUAL': return 'Individual';
+      case 'CARPOOL_2':  return 'Carpool 2';
+      case 'CARPOOL_3':  return 'Carpool 3';
+      case 'CARPOOL_4':  return 'Carpool 4';
+      case 'CARPOOL_5':  return 'Carpool 5';
+      default:           return badgeType;
+    }
   }
 
   Widget _buildHistoryButton(BuildContext context) {
@@ -459,12 +577,10 @@ class _ProfileScreenState extends State<ProfileScreen>
 class _TappableCard extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
-  final Color? accentLeft;
 
   const _TappableCard({
     required this.child,
     required this.onTap,
-    this.accentLeft,
   });
 
   @override
@@ -492,20 +608,9 @@ class _TappableCardState extends State<_TappableCard> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius - 1),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (widget.accentLeft != null)
-                    Container(width: 4, color: widget.accentLeft),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.cardPadding),
-                      child: widget.child,
-                    ),
-                  ),
-                ],
-              ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.cardPadding),
+              child: widget.child,
             ),
           ),
         ),
