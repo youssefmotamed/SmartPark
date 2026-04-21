@@ -38,6 +38,8 @@ import 'screens/guard/scan_result_screen.dart';
 import 'screens/guard/violation_report_screen.dart';
 import 'screens/guard/spot_override_screen.dart';
 import 'screens/admin/admin_shell.dart';
+import 'screens/admin/user_management_screen.dart';
+import 'screens/admin/user_detail_screen.dart';
 
 void main() {
   runApp(const SmartParkApp());
@@ -197,10 +199,48 @@ final GoRouter _router = GoRouter(
 
     // ── Admin shell ──────────────────────────────────────────────────────────
     // AdminShell manages its own 3-tab IndexedStack internally.
-    // Admin sub-routes (users, badges, analytics) added in Phase 6.
     GoRoute(
       path: '/admin/home',
       builder: (_, _) => const AdminShell(),
+    ),
+
+    // ── Admin sub-routes (Phase 6) ───────────────────────────────────────────
+    // '/admin/users/create' MUST be before '/admin/users/:userId' so GoRouter
+    // does not parse the literal "create" as an integer userId.
+    GoRoute(
+      path: '/admin/users',
+      builder: (_, _) => const UserManagementScreen(),
+    ),
+    GoRoute(
+      path: '/admin/users/create',
+      builder: (_, _) => const UserDetailScreen(isCreateMode: true),
+    ),
+    GoRoute(
+      path: '/admin/users/:userId',
+      builder: (_, state) => UserDetailScreen(
+        userId: int.parse(state.pathParameters['userId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/admin/badges',
+      builder: (_, _) => Scaffold(
+        appBar: AppBar(title: const Text('Badge Management')),
+        body: const Center(child: Text('S31 coming soon')),
+      ),
+    ),
+    GoRoute(
+      path: '/admin/violations',
+      builder: (_, _) => Scaffold(
+        appBar: AppBar(title: const Text('Violation History')),
+        body: const Center(child: Text('S32 coming soon')),
+      ),
+    ),
+    GoRoute(
+      path: '/admin/rewards',
+      builder: (_, _) => Scaffold(
+        appBar: AppBar(title: const Text('Rewards Management')),
+        body: const Center(child: Text('S33 coming soon')),
+      ),
     ),
   ],
 );
