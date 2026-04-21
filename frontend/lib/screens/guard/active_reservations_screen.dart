@@ -173,6 +173,15 @@ class _ActiveReservationsScreenState extends State<ActiveReservationsScreen> {
             ),
           ),
         ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: AppColors.primary,
+          icon: const Icon(LucideIcons.settings2, color: Colors.white),
+          label: Text(
+            'Override Spot',
+            style: AppTypography.labelMedium.copyWith(color: Colors.white),
+          ),
+          onPressed: () => context.push('/guard/override'),
+        ),
         body: () {
           if (provider.isLoadingEntries && provider.entries.isEmpty) {
             return const Center(
