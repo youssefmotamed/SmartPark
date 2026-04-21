@@ -40,6 +40,10 @@ import 'screens/guard/spot_override_screen.dart';
 import 'screens/admin/admin_shell.dart';
 import 'screens/admin/user_management_screen.dart';
 import 'screens/admin/user_detail_screen.dart';
+import 'screens/admin/badge_management_screen.dart';
+import 'screens/admin/violation_history_screen.dart';
+import 'screens/admin/rewards_management_screen.dart';
+import 'screens/shared/suspension_screen.dart';
 
 void main() {
   runApp(const SmartParkApp());
@@ -223,24 +227,19 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/admin/badges',
-      builder: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Badge Management')),
-        body: const Center(child: Text('S31 coming soon')),
-      ),
+      builder: (_, _) => const BadgeManagementScreen(),
     ),
     GoRoute(
       path: '/admin/violations',
-      builder: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Violation History')),
-        body: const Center(child: Text('S32 coming soon')),
-      ),
+      builder: (_, _) => const ViolationHistoryScreen(),
     ),
     GoRoute(
       path: '/admin/rewards',
-      builder: (_, _) => Scaffold(
-        appBar: AppBar(title: const Text('Rewards Management')),
-        body: const Center(child: Text('S33 coming soon')),
-      ),
+      builder: (_, _) => const RewardsManagementScreen(),
+    ),
+    GoRoute(
+      path: '/suspension',
+      builder: (_, _) => const SuspensionScreen(),
     ),
   ],
 );
