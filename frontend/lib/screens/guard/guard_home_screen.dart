@@ -45,6 +45,13 @@ class GuardHomeScreen extends StatelessWidget {
       route: '/guard/violation',
       color: AppColors.error,
     ),
+    _ActionData(
+      icon:  LucideIcons.settings2,
+      label: 'Override Spot',
+      sub:   'Manual status fix',
+      route: '/guard/override',
+      color: AppColors.textSecondary,
+    ),
   ];
 
   static const List<_StatData> _stats = [
@@ -101,7 +108,7 @@ class GuardHomeScreen extends StatelessWidget {
                 children: _actions.map((data) {
                   return _ActionCard(
                     data: data,
-                    onTap: () => context.go(data.route),
+                    onTap: () => context.push(data.route),
                   );
                 }).toList(),
               ),

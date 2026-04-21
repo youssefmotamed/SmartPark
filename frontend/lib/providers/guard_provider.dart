@@ -176,6 +176,9 @@ class GuardProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await GuardService().completeGuestParking(guestParkingId);
+      // Remove locally for instant UI feedback before server refresh.
+      _entries.removeWhere((e) => e.isGuest && e.id == guestParkingId);
+      notifyListeners();
       await loadEntries();
       return true;
     } on ApiException catch (e) {

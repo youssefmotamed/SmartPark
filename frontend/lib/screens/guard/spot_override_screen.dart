@@ -1,5 +1,6 @@
 // spot_override_screen.dart — S27: Guard manually overrides a spot's status.
 // Shows all spots in a grid, a status selector, a reason dropdown, and Apply.
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -27,6 +28,7 @@ class _SpotOverrideScreenState extends State<SpotOverrideScreen> {
   Spot?   _selectedSpot;
   String? _newStatus;   // 'AVAILABLE' | 'OCCUPIED' | 'UNAVAILABLE'
   String? _reason;      // OverrideReason enum value
+  Timer?  _refreshTimer;
 
   static const List<_StatusOption> _statusOptions = [
     _StatusOption('AVAILABLE',   'Available',   AppColors.available),
@@ -47,7 +49,16 @@ class _SpotOverrideScreenState extends State<SpotOverrideScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SpotsProvider>().fetchSpots();
+      _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+        if (mounted) context.read<SpotsProvider>().fetchSpots();
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   // ── Apply action ───────────────────────────────────────────────────────────
