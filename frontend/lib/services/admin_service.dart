@@ -174,6 +174,14 @@ class AdminService extends BaseApiService {
 
   // ── Rewards ───────────────────────────────────────────────────────────────
 
+  /// Gets all rewards for the admin to configure.
+  /// Maps to GET /admin/rewards.
+  Future<List<Map<String, dynamic>>> getRewards() async {
+    final response = await get('/admin/rewards');
+    final list = response['data'] as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
   /// Updates a reward's [pointsCost] and/or [isActive] flag.
   /// Omit a field to leave it unchanged.
   /// Maps to PUT /admin/rewards/{id}.

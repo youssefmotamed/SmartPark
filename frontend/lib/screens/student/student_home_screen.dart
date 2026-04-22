@@ -11,6 +11,7 @@ import '../../config/constants.dart';
 import '../../models/reservation_response.dart';
 import '../../models/spot.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/badge_provider.dart';
 import '../../providers/reservation_provider.dart';
 import '../../providers/spots_provider.dart';
 import '../../widgets/spot_detail_sheet.dart';
@@ -48,6 +49,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
       context.read<SpotsProvider>().startPolling();
       context.read<ReservationProvider>().fetchActiveReservation();
       _checkGeolocation();
+      context.read<BadgeProvider>().loadBadges().then((_) {
+        if (mounted) _checkSuspension();
+      });
     });
   }
 
@@ -56,6 +60,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
     _shimmerController.dispose();
     context.read<SpotsProvider>().stopPolling();
     super.dispose();
+  }
+
+  // ── Suspension check ─────────────────────────────────────────────────────────
+
+  void _checkSuspension() {
+    final badge = context.read<BadgeProvider>().defaultBadge;
+    if (badge != null && badge.isSuspended) {
+      context.push('/suspension');
+    }
   }
 
   // ── Geolocation ──────────────────────────────────────────────────────────────
