@@ -383,7 +383,9 @@ class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
             onUnsuspend: () =>
                 _handleUnsuspend(provider.badges[i].badgeId),
             onViewMembers: () => context.push(
-                '/admin/badges/${provider.badges[i].badgeId}/members'),
+              '/admin/badges/${provider.badges[i].badgeId}/members',
+              extra: provider.badges[i],
+            ),
           );
         },
       ),

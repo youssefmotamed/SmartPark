@@ -40,7 +40,9 @@ import 'screens/guard/spot_override_screen.dart';
 import 'screens/admin/admin_shell.dart';
 import 'screens/admin/user_management_screen.dart';
 import 'screens/admin/user_detail_screen.dart';
+import 'models/admin_badge.dart';
 import 'screens/admin/badge_management_screen.dart';
+import 'screens/admin/badge_members_screen.dart';
 import 'screens/admin/violation_history_screen.dart';
 import 'screens/admin/rewards_management_screen.dart';
 import 'screens/shared/suspension_screen.dart';
@@ -228,6 +230,19 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/admin/badges',
       builder: (_, _) => const BadgeManagementScreen(),
+    ),
+    GoRoute(
+      path: '/admin/badges/:badgeId/members',
+      builder: (_, state) {
+        final badge = state.extra as AdminBadge?;
+        if (badge == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Badge Members')),
+            body: const Center(child: Text('Badge data not available')),
+          );
+        }
+        return BadgeMembersScreen(badge: badge);
+      },
     ),
     GoRoute(
       path: '/admin/violations',
