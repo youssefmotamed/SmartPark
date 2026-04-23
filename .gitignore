@@ -48,7 +48,7 @@ backend/src/main/resources/application-local.properties
 .project
 .classpath
 .settings/
-
+CLAUDE.md
 # ========================
 # OS Files
 # ========================
