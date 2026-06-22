@@ -1,24 +1,13 @@
-// active_reservations_screen.dart — S24: Combined active reservations and
-// guest parking list for the guard. Two tabs: student reservations and
-// guard-created guest entries.
+// active_reservations_screen.dart — S24: Active entries tab (reservations + guest)
+// Light gray background, pill tab selector, status-colored reservation cards.
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../config/colors.dart';
-import '../../config/app_typography.dart';
-import '../../config/app_spacing.dart';
 import '../../models/guard_entry.dart';
 import '../../providers/guard_provider.dart';
 
-/// S24 — Active Entries screen.
-///
-/// Shows two tabs:
-/// - Reservations: active student reservations currently on campus
-/// - Guest Parking: guard-created guest slots for Zone C
-///
-/// Loads [GuardProvider.loadEntries] on open and supports pull-to-refresh.
 class ActiveReservationsScreen extends StatefulWidget {
   const ActiveReservationsScreen({super.key});
 
@@ -28,6 +17,17 @@ class ActiveReservationsScreen extends StatefulWidget {
 }
 
 class _ActiveReservationsScreenState extends State<ActiveReservationsScreen> {
+  int _tab = 0;
+
+  static const _kPageBg    = Color(0xFFEEF1F7);
+  static const _kCardText  = Color(0xFF1A2035);
+  static const _kCardSub   = Color(0xFF6B7280);
+  static const _kGreen     = Color(0xFF2E7D32);
+  static const _kGreenBg   = Color(0xFFE8F5E9);
+  static const _kAmber     = Color(0xFFE65100);
+  static const _kAmberBg   = Color(0xFFFFF8E1);
+  static const _kTabNavy   = Color(0xFF1A2A3A);
+  static const _kTabGreen  = Color(0xFF4CAF50);
 
   @override
   void initState() {
@@ -37,13 +37,32 @@ class _ActiveReservationsScreenState extends State<ActiveReservationsScreen> {
     });
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-  String _formatTime(DateTime? dt) {
+  String _formatLeaveTime(DateTime? dt) {
     if (dt == null) return '--:--';
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+
+  String _elapsed(DateTime? dt) {
+    if (dt == null) return '—';
+    final diff = DateTime.now().difference(dt);
+    final h = diff.inHours;
+    final m = diff.inMinutes % 60;
+    if (h > 0) return '${h}h ${m}m ago';
+    return '${diff.inMinutes}m ago';
+  }
+
+  String _zoneName(String spotLabel) {
+    if (spotLabel.isEmpty) return '';
+    switch (spotLabel[0]) {
+      case 'A': return 'Main Parking';
+      case 'B': return 'Carpool Zone';
+      case 'C': return 'Guest Area';
+      default:  return '';
+    }
   }
 
   String _badgeName(String? type) {
@@ -56,572 +75,518 @@ class _ActiveReservationsScreenState extends State<ActiveReservationsScreen> {
     }
   }
 
-  // ── Complete guest action ─────────────────────────────────────────────────
+  String _resId(int id) =>
+      'RES-${id.toRadixString(16).toUpperCase().padLeft(4, '0')}';
 
-  Future<void> _handleCompleteGuest(int guestParkingId) async {
+  Future<void> _completeGuest(int guestParkingId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceLight,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        ),
-        title: Text('Complete Guest Parking',
-            style: AppTypography.labelMedium
-                .copyWith(color: AppColors.textPrimary, fontSize: 16)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Complete?',
+            style: GoogleFonts.manrope(
+                fontWeight: FontWeight.w700, color: _kCardText)),
         content: Text('Mark this guest as departed?',
-            style: AppTypography.bodyMedium),
+            style: GoogleFonts.manrope(color: _kCardSub)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'Cancel',
-              style: AppTypography.labelSmall
-                  .copyWith(color: AppColors.textSecondary),
-            ),
+            child: Text('Cancel',
+                style: GoogleFonts.manrope(color: _kCardSub)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: AppColors.background,
-              elevation: 0,
+              backgroundColor: _kTabGreen,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.buttonRadiusSmall),
-              ),
+                  borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text('Complete',
-                style: AppTypography.labelSmall
-                    .copyWith(color: AppColors.background)),
+                style: GoogleFonts.manrope(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     );
-
     if (confirmed != true || !mounted) return;
-
-    final success =
+    final ok =
         await context.read<GuardProvider>().completeGuestParking(guestParkingId);
-
     if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Guest parking completed'
-              : (context.read<GuardProvider>().operationError ?? 'Failed'),
-        ),
-        backgroundColor: success ? AppColors.success : AppColors.error,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok ? 'Guest parking completed' : 'Failed'),
+      backgroundColor: ok ? AppColors.success : AppColors.error,
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final provider     = context.watch<GuardProvider>();
     final reservations = provider.reservations;
-    final guestEntries = provider.guestEntries;
+    final guests       = provider.guestEntries;
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.surface,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft,
-                color: AppColors.textSecondary),
-            onPressed: () => context.go('/guard/home'),
-          ),
-          title: Text('Active Entries', style: AppTypography.displaySmall),
-          centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(LucideIcons.refreshCw,
-                  size: 20, color: AppColors.textSecondary),
-              onPressed: provider.loadEntries,
-            ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(49),
+    return Scaffold(
+      backgroundColor: _kPageBg,
+      body: Column(
+        children: [
+          // ── Pill tab selector ──────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Container(
-              decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: AppColors.divider, width: 1),
-                ),
+              decoration: BoxDecoration(
+                color: _kTabNavy,
+                borderRadius: BorderRadius.circular(30),
               ),
-              child: TabBar(
-                indicatorColor: AppColors.warning,
-                indicatorWeight: 2,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: AppColors.warning,
-                unselectedLabelColor: AppColors.textTertiary,
-                labelStyle: AppTypography.labelSmall
-                    .copyWith(color: AppColors.warning),
-                unselectedLabelStyle: AppTypography.labelSmall
-                    .copyWith(color: AppColors.textTertiary),
-                tabs: [
-                  Tab(text: 'Reservations (${reservations.length})'),
-                  Tab(text: 'Guest (${guestEntries.length})'),
+              padding: const EdgeInsets.all(4),
+              child: Row(
+                children: [
+                  _PillTab(
+                    label: 'Reservations (${reservations.length})',
+                    active: _tab == 0,
+                    activeColor: _kTabGreen,
+                    onTap: () => setState(() => _tab = 0),
+                  ),
+                  _PillTab(
+                    label: 'Guest Parking (${guests.length})',
+                    active: _tab == 1,
+                    activeColor: _kTabGreen,
+                    onTap: () => setState(() => _tab = 1),
+                  ),
                 ],
               ),
             ),
           ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          backgroundColor: AppColors.primary,
-          icon: const Icon(LucideIcons.settings2, color: Colors.white),
-          label: Text(
-            'Override Spot',
-            style: AppTypography.labelMedium.copyWith(color: Colors.white),
+
+          const SizedBox(height: 12),
+
+          // ── Content ────────────────────────────────────────────────────────
+          Expanded(
+            child: provider.isLoadingEntries && provider.entries.isEmpty
+                ? const Center(
+                    child: CircularProgressIndicator(
+                        color: Color(0xFF4CAF50)))
+                : provider.entriesError != null && provider.entries.isEmpty
+                    ? _buildError(provider)
+                    : _tab == 0
+                        ? _buildReservations(reservations, provider)
+                        : _buildGuests(guests, provider),
           ),
-          onPressed: () => context.push('/guard/override'),
-        ),
-        body: () {
-          if (provider.isLoadingEntries && provider.entries.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.warning),
-            );
-          }
-          if (provider.entriesError != null && provider.entries.isEmpty) {
-            return _buildError(provider);
-          }
-          return TabBarView(
-            children: [
-              _buildReservationsTab(provider, reservations),
-              _buildGuestTab(provider, guestEntries),
-            ],
-          );
-        }(),
+        ],
       ),
     );
   }
 
-  // ── Error state ───────────────────────────────────────────────────────────
-
-  Widget _buildError(GuardProvider provider) {
+  Widget _buildError(GuardProvider p) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.screenH),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(LucideIcons.alertCircle, size: 48, color: AppColors.error),
+          const SizedBox(height: 16),
+          Text(p.entriesError!,
+              style: GoogleFonts.manrope(color: _kCardSub),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: p.loadEntries,
+            child: Text('Retry',
+                style: GoogleFonts.manrope(
+                    color: _kTabGreen, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReservations(List<GuardEntry> list, GuardProvider p) {
+    if (list.isEmpty) {
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(LucideIcons.alertCircle,
-                size: 48, color: AppColors.error),
-            const SizedBox(height: 16),
-            Text(
-              provider.entriesError!,
-              style: AppTypography.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: provider.loadEntries,
-              child: Text(
-                'Retry',
-                style: AppTypography.labelMedium
-                    .copyWith(color: AppColors.warning),
-              ),
-            ),
+            const Icon(LucideIcons.clipboardList,
+                size: 48, color: Color(0xFFBDBDBD)),
+            const SizedBox(height: 12),
+            Text('No active reservations',
+                style: GoogleFonts.manrope(
+                    fontSize: 15, color: _kCardSub)),
           ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: p.loadEntries,
+      color: _kTabGreen,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        itemCount: list.length,
+        itemBuilder: (_, i) => _ReservationCard(
+          entry:    list[i],
+          resId:    _resId(list[i].id),
+          zoneName: _zoneName(list[i].spotLabel),
+          badge:    _badgeName(list[i].badgeType),
+          elapsed:  _elapsed(list[i].reservedAt),
+          leaveBy:  _formatLeaveTime(list[i].expectedLeaveTime),
+          kGreen: _kGreen, kGreenBg: _kGreenBg,
+          kAmber: _kAmber, kAmberBg: _kAmberBg,
+          kCardText: _kCardText, kCardSub: _kCardSub,
         ),
       ),
     );
   }
 
-  // ── Tab 1: Reservations ───────────────────────────────────────────────────
-
-  Widget _buildReservationsTab(
-      GuardProvider provider, List<GuardEntry> reservations) {
+  Widget _buildGuests(List<GuardEntry> list, GuardProvider p) {
+    if (list.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(LucideIcons.car, size: 48, color: Color(0xFFBDBDBD)),
+            const SizedBox(height: 12),
+            Text('No guest parking active',
+                style: GoogleFonts.manrope(fontSize: 15, color: _kCardSub)),
+          ],
+        ),
+      );
+    }
     return RefreshIndicator(
-      onRefresh: provider.loadEntries,
-      color: AppColors.warning,
-      backgroundColor: AppColors.surfaceLight,
-      child: reservations.isEmpty
-          ? _buildEmptyState('No active reservations')
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH,
-                AppSpacing.screenV,
-                AppSpacing.screenH,
-                AppSpacing.lg,
-              ),
-              itemCount: reservations.length,
-              itemBuilder: (_, i) =>
-                  _ReservationCard(
-                    entry: reservations[i],
-                    formatTime: _formatTime,
-                    badgeName: _badgeName,
-                  ),
-            ),
+      onRefresh: p.loadEntries,
+      color: _kTabGreen,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        itemCount: list.length,
+        itemBuilder: (_, i) => _GuestCard(
+          entry:      list[i],
+          elapsed:    _elapsed(list[i].createdAt),
+          onComplete: _completeGuest,
+          kCardText: _kCardText, kCardSub: _kCardSub,
+        ),
+      ),
     );
   }
+}
 
-  // ── Tab 2: Guest parking ──────────────────────────────────────────────────
+// ── Pill tab ──────────────────────────────────────────────────────────────────
 
-  Widget _buildGuestTab(
-      GuardProvider provider, List<GuardEntry> guestEntries) {
-    return RefreshIndicator(
-      onRefresh: provider.loadEntries,
-      color: AppColors.warning,
-      backgroundColor: AppColors.surfaceLight,
-      child: guestEntries.isEmpty
-          ? _buildEmptyState('No guest parking active')
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH,
-                AppSpacing.screenV,
-                AppSpacing.screenH,
-                AppSpacing.lg,
-              ),
-              itemCount: guestEntries.length,
-              itemBuilder: (_, i) => _GuestCard(
-                entry: guestEntries[i],
-                formatTime: _formatTime,
-                onComplete: _handleCompleteGuest,
-              ),
+class _PillTab extends StatelessWidget {
+  final String label;
+  final bool   active;
+  final Color  activeColor;
+  final VoidCallback onTap;
+  const _PillTab({
+    required this.label, required this.active,
+    required this.activeColor, required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(
+            color: active ? activeColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.manrope(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: active ? const Color(0xFF1A2035) : Colors.white54,
             ),
+          ),
+        ),
+      ),
     );
   }
+}
 
-  // ── Empty state ───────────────────────────────────────────────────────────
+// ── Reservation card ──────────────────────────────────────────────────────────
 
-  Widget _buildEmptyState(String message) {
-    return LayoutBuilder(
-      builder: (_, constraints) => SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: SizedBox(
-          height: constraints.maxHeight,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+class _ReservationCard extends StatelessWidget {
+  final GuardEntry entry;
+  final String resId, zoneName, badge, elapsed, leaveBy;
+  final Color kGreen, kGreenBg, kAmber, kAmberBg, kCardText, kCardSub;
+
+  const _ReservationCard({
+    required this.entry,
+    required this.resId, required this.zoneName,
+    required this.badge, required this.elapsed, required this.leaveBy,
+    required this.kGreen, required this.kGreenBg,
+    required this.kAmber, required this.kAmberBg,
+    required this.kCardText, required this.kCardSub,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isInside = entry.status == 'ENTERED';
+    final statusBg   = isInside ? kGreenBg : kAmberBg;
+    final statusColor = isInside ? kGreen   : kAmber;
+    final statusLabel = isInside ? 'INSIDE'  : 'EN ROUTE';
+    final plates      = entry.plateNumbers ?? [];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            blurRadius: 10, offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Status header bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: statusBg,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
               children: [
-                const Icon(LucideIcons.parkingCircle,
-                    size: 48, color: AppColors.textTertiary),
-                const SizedBox(height: 16),
+                Container(
+                  width: 8, height: 8,
+                  decoration:
+                      BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 8),
                 Text(
-                  message,
-                  style: AppTypography.bodyMedium
-                      .copyWith(color: AppColors.textSecondary),
+                  statusLabel,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12, fontWeight: FontWeight.w700,
+                    color: statusColor, letterSpacing: 0.5,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  resId,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12, fontWeight: FontWeight.w600,
+                    color: statusColor.withAlpha(180),
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reservation entry card
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ReservationCard extends StatelessWidget {
-  final GuardEntry entry;
-  final String Function(DateTime?) formatTime;
-  final String Function(String?) badgeName;
-
-  const _ReservationCard({
-    required this.entry,
-    required this.formatTime,
-    required this.badgeName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isEntered   = entry.status == 'ENTERED';
-    final accentColor = isEntered ? AppColors.success : AppColors.reserved;
-    final statusColor = isEntered ? AppColors.success : AppColors.reserved;
-    final plates      = entry.plateNumbers ?? [];
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color:        AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Left accent
-            Container(width: 4, color: accentColor),
-
-            // Content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          // Card body
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Name + plate
+                Row(
                   children: [
-                    // Top row: spot + status pill
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          entry.spotLabel,
-                          style: GoogleFonts.outfit(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
+                    Expanded(
+                      child: Text(
+                        entry.studentName ?? '—',
+                        style: GoogleFonts.manrope(
+                          fontSize: 17, fontWeight: FontWeight.w800,
+                          color: kCardText,
                         ),
-                        const Spacer(),
-                        _StatusPill(
-                          label: entry.status ?? 'ACTIVE',
-                          color: statusColor,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Middle row: student name + badge type
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Icon(LucideIcons.user,
-                            size: 16, color: AppColors.textTertiary),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            entry.studentName ?? '--',
-                            style: AppTypography.bodyMedium
-                                .copyWith(color: AppColors.textPrimary),
-                          ),
-                        ),
-                        Text(
-                          badgeName(entry.badgeType),
-                          style: AppTypography.labelSmall
-                              .copyWith(color: AppColors.textTertiary),
-                        ),
-                      ],
-                    ),
-
-                    // Plates row
-                    if (plates.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(LucideIcons.car,
-                              size: 14, color: AppColors.textTertiary),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              plates.join(' · '),
-                              style: AppTypography.mono.copyWith(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
-                    ],
-
-                    const SizedBox(height: 8),
-
-                    // Bottom row: reserved time + leave time
-                    Row(
-                      children: [
-                        const Icon(LucideIcons.clock,
-                            size: 14, color: AppColors.textTertiary),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Reserved ${formatTime(entry.reservedAt)}',
-                          style: AppTypography.bodySmall,
+                    ),
+                    if (plates.isNotEmpty)
+                      Text(
+                        plates.first.replaceAll('', ' ').trim(),
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 15, fontWeight: FontWeight.w700,
+                          color: kCardText, letterSpacing: 2,
                         ),
-                        if (entry.expectedLeaveTime != null) ...[
-                          const Spacer(),
-                          Text(
-                            'Leave by ${formatTime(entry.expectedLeaveTime)}',
-                            style: AppTypography.bodySmall,
-                          ),
-                        ],
-                      ],
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // Location + badge
+                Row(
+                  children: [
+                    Icon(LucideIcons.mapPin, size: 13, color: kCardSub),
+                    const SizedBox(width: 5),
+                    Text(
+                      '${entry.spotLabel} · $zoneName',
+                      style: GoogleFonts.manrope(
+                          fontSize: 13, color: kCardSub),
+                    ),
+                    const SizedBox(width: 14),
+                    Icon(LucideIcons.shield, size: 13, color: kCardSub),
+                    const SizedBox(width: 5),
+                    Text(
+                      badge,
+                      style: GoogleFonts.manrope(
+                          fontSize: 13, color: kCardSub),
                     ),
                   ],
                 ),
-              ),
+
+                const SizedBox(height: 10),
+
+                // Time row
+                Row(
+                  children: [
+                    Icon(LucideIcons.clock, size: 13, color: kCardSub),
+                    const SizedBox(width: 5),
+                    Text(
+                      '${isInside ? 'Entered' : 'Reserved'} $elapsed',
+                      style: GoogleFonts.manrope(
+                          fontSize: 13, color: kCardSub),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Leave by ',
+                      style: GoogleFonts.manrope(
+                          fontSize: 13, color: kCardSub),
+                    ),
+                    Text(
+                      leaveBy,
+                      style: GoogleFonts.manrope(
+                        fontSize: 13, fontWeight: FontWeight.w800,
+                        color: kCardText,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Guest parking entry card
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Guest card ────────────────────────────────────────────────────────────────
 
 class _GuestCard extends StatelessWidget {
   final GuardEntry entry;
-  final String Function(DateTime?) formatTime;
+  final String elapsed;
   final void Function(int) onComplete;
+  final Color kCardText, kCardSub;
 
   const _GuestCard({
-    required this.entry,
-    required this.formatTime,
-    required this.onComplete,
+    required this.entry, required this.elapsed,
+    required this.onComplete, required this.kCardText, required this.kCardSub,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color:        AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            blurRadius: 10, offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Left accent — info blue
-            Container(width: 4, color: AppColors.info),
-
-            // Content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE3F2FD),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 8, height: 8,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1565C0), shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 8),
+                Text('GUEST',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12, fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1565C0), letterSpacing: 0.5,
+                    )),
+                const Spacer(),
+                Text(
+                  entry.spotLabel,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12, fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1565C0).withAlpha(180),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Body
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    // Top row: spot + GUEST pill
-                    Row(
-                      children: [
-                        Text(
-                          entry.spotLabel,
-                          style: GoogleFonts.outfit(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
+                    Expanded(
+                      child: Text(
+                        entry.guestPlateNumber ?? '—',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 18, fontWeight: FontWeight.w700,
+                          color: kCardText, letterSpacing: 2,
                         ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.info.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'GUEST',
-                            style: AppTypography.labelSmall
-                                .copyWith(color: AppColors.info),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Plate row
-                    Row(
-                      children: [
-                        const Icon(LucideIcons.car,
-                            size: 14, color: AppColors.textTertiary),
-                        const SizedBox(width: 6),
-                        Text(
-                          entry.guestPlateNumber ?? '--',
-                          style: AppTypography.mono.copyWith(
-                            fontSize: 13,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Purpose row (optional)
-                    if (entry.purpose != null && entry.purpose!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(LucideIcons.info,
-                              size: 14, color: AppColors.textTertiary),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              entry.purpose!,
-                              style: AppTypography.bodySmall
-                                  .copyWith(color: AppColors.textSecondary),
-                            ),
-                          ),
-                        ],
                       ),
-                    ],
-
-                    const SizedBox(height: 8),
-
-                    // Bottom row: created time + Complete button
-                    Row(
-                      children: [
-                        Text(
-                          'Created ${formatTime(entry.createdAt)}',
-                          style: AppTypography.bodySmall,
+                    ),
+                    TextButton(
+                      onPressed: () => onComplete(entry.id),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF2E7D32),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: const BorderSide(color: Color(0xFF2E7D32)),
                         ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () => onComplete(entry.id),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.success,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            'Complete',
-                            style: AppTypography.labelSmall
-                                .copyWith(color: AppColors.success),
-                          ),
-                        ),
-                      ],
+                      ),
+                      child: Text('Complete',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12, fontWeight: FontWeight.w600,
+                            color: const Color(0xFF2E7D32),
+                          )),
                     ),
                   ],
                 ),
-              ),
+                if (entry.purpose != null && entry.purpose!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(entry.purpose!,
+                      style: GoogleFonts.manrope(
+                          fontSize: 13, color: kCardSub)),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(LucideIcons.clock, size: 13, color: kCardSub),
+                    const SizedBox(width: 5),
+                    Text('Created $elapsed',
+                        style:
+                            GoogleFonts.manrope(fontSize: 13, color: kCardSub)),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Status pill
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _StatusPill extends StatelessWidget {
-  final String label;
-  final Color  color;
-
-  const _StatusPill({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color:        color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        label,
-        style: AppTypography.labelSmall.copyWith(color: color),
+          ),
+        ],
       ),
     );
   }

@@ -43,7 +43,7 @@ class AppSpacing {
   static const double badgeHeight = 28.0;
 
   // ── Parking spot (map painter) ────────────────────────────────────────────
-  static const double spotWidth  = 56.0;
-  static const double spotHeight = 40.0;
-  static const double spotRadius = 8.0;
+  static const double spotWidth  = 60.0;
+  static const double spotHeight = 84.0;
+  static const double spotRadius = 12.0;
 }

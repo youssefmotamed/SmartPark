@@ -1,6 +1,5 @@
-// login_screen.dart — S02: Login screen — "THE GATE" aesthetic
-// Industrial-bold split layout: near-black header with ghost "P" + diagonal
-// stripe watermark; dark surface card rises from below. Bebas Neue × Manrope.
+// login_screen.dart — S02: Login screen
+// Split layout: dark navy header with P-badge logo, white card slides up from below.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,10 +7,6 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 
-/// S02 — Login screen for all user roles.
-///
-/// Phase 0: catches [UnimplementedError] from [AuthProvider.login] and
-/// mocks navigation to `/student/home` so the UI flow can be tested end-to-end.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -29,22 +24,12 @@ class _LoginScreenState extends State<LoginScreen>
   bool _buttonPressed = false;
 
   // ── Animation controllers ──────────────────────────────────────────────────
-
-  /// Logo fade + white card slide (600 ms total).
   late final AnimationController _bgController;
-
-  /// Staggered reveal of form elements inside the card (600 ms, starts after
-  /// the card is on-screen).
   late final AnimationController _formController;
-
-  /// Horizontal shake played when a login error surfaces (300 ms).
   late final AnimationController _shakeController;
 
-  // bg group
   late final Animation<double> _logoFade;
   late final Animation<Offset> _cardSlide;
-
-  // form group
   late final Animation<double> _cardHeaderFade;
   late final Animation<double> _emailFade;
   late final Animation<Offset> _emailSlide;
@@ -52,15 +37,26 @@ class _LoginScreenState extends State<LoginScreen>
   late final Animation<Offset> _passwordSlide;
   late final Animation<double> _buttonFade;
   late final Animation<Offset> _buttonSlide;
-
-  // shake
   late final Animation<double> _shakeOffset;
+
+  // ── Light-card color palette ───────────────────────────────────────────────
+  static const _kCardText    = Color(0xFF1A2035);
+  static const _kCardTextSub = Color(0xFF6B7280);
+  static const _kFieldBorder = Color(0xFFE5E7EB);
+  static const _kButtonColor = Color(0xFFEDB82A);
+  static const _kDemoBg     = Color(0xFFF5F7FA);
+
+  // ── Demo credentials ───────────────────────────────────────────────────────
+  static const _demoUsers = [
+    _DemoUser('youssef@smartpark.com', 'youssef123', 'STUDENT', Color(0xFF26A69A)),
+    _DemoUser('guard@smartpark.com',  'Guard@2026', 'GUARD',   Color(0xFF455A64)),
+    _DemoUser('admin@smartpark.com',  'Admin@2026', 'ADMIN',   Color(0xFFE53935)),
+  ];
 
   @override
   void initState() {
     super.initState();
 
-    // ── Background / card entrance ─────────────────────────────────────────
     _bgController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 620),
@@ -70,8 +66,6 @@ class _LoginScreenState extends State<LoginScreen>
       parent: _bgController,
       curve: const Interval(0.0, 0.55, curve: Curves.easeIn),
     );
-
-    // White card slides up from fully off-screen (Offset(0,1) = 100% own height).
     _cardSlide = Tween<Offset>(
       begin: const Offset(0, 1),
       end: Offset.zero,
@@ -80,8 +74,6 @@ class _LoginScreenState extends State<LoginScreen>
       curve: const Interval(0.0, 0.88, curve: Curves.easeOutQuart),
     ));
 
-    // ── Form content stagger ───────────────────────────────────────────────
-    // Controller starts 360 ms after _bgController — card is ~75 % in by then.
     _formController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 620),
@@ -91,53 +83,27 @@ class _LoginScreenState extends State<LoginScreen>
     const slideStart = Offset(0, 0.18);
 
     _cardHeaderFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _formController,
-        curve: const Interval(0.00, 0.50, curve: c),
-      ),
+      CurvedAnimation(parent: _formController, curve: const Interval(0.00, 0.50, curve: c)),
     );
-
     _emailFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _formController,
-        curve: const Interval(0.12, 0.62, curve: c),
-      ),
+      CurvedAnimation(parent: _formController, curve: const Interval(0.12, 0.62, curve: c)),
     );
     _emailSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _formController,
-        curve: const Interval(0.12, 0.62, curve: c),
-      ),
+      CurvedAnimation(parent: _formController, curve: const Interval(0.12, 0.62, curve: c)),
     );
-
     _passwordFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _formController,
-        curve: const Interval(0.27, 0.77, curve: c),
-      ),
+      CurvedAnimation(parent: _formController, curve: const Interval(0.27, 0.77, curve: c)),
     );
-    _passwordSlide =
-        Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _formController,
-        curve: const Interval(0.27, 0.77, curve: c),
-      ),
+    _passwordSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
+      CurvedAnimation(parent: _formController, curve: const Interval(0.27, 0.77, curve: c)),
     );
-
     _buttonFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _formController,
-        curve: const Interval(0.42, 1.00, curve: c),
-      ),
+      CurvedAnimation(parent: _formController, curve: const Interval(0.42, 1.00, curve: c)),
     );
     _buttonSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _formController,
-        curve: const Interval(0.42, 1.00, curve: c),
-      ),
+      CurvedAnimation(parent: _formController, curve: const Interval(0.42, 1.00, curve: c)),
     );
 
-    // ── Error shake ────────────────────────────────────────────────────────
     _shakeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -150,7 +116,6 @@ class _LoginScreenState extends State<LoginScreen>
       TweenSequenceItem(tween: Tween(begin: 5.0, end: 0.0), weight: 1),
     ]).animate(_shakeController);
 
-    // Kick off entrance sequence
     _bgController.forward();
     Future.delayed(
       const Duration(milliseconds: 360),
@@ -169,6 +134,13 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
+
+  void _fillDemo(_DemoUser user) {
+    _emailController.text = user.email;
+    _passwordController.text = user.password;
+    context.read<AuthProvider>().clearError();
+    FocusScope.of(context).unfocus();
+  }
 
   Future<void> _handleLogin() async {
     context.read<AuthProvider>().clearError();
@@ -201,49 +173,23 @@ class _LoginScreenState extends State<LoginScreen>
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      // Deep background fills any gap that shows behind the card during animation.
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // 1 — Diagonal stripe watermark across the whole screen.
-          Positioned.fill(
-            child: CustomPaint(painter: _DiagonalStripePainter()),
-          ),
-
-          // 2 — Giant ghost "P" — the one thing users remember.
-          Positioned(
-            right: -20,
-            top: 20,
-            child: FadeTransition(
-              opacity: _logoFade,
-              child: Text(
-                'P',
-                style: GoogleFonts.bebasNeue(
-                  fontSize: 260,
-                  color: Colors.white.withAlpha(12), // ≈ 5 %
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-
-          // 3 — Content column: logo zone (blue) + form card (white).
+          Positioned.fill(child: CustomPaint(painter: _DiagonalStripePainter())),
           Column(
             children: [
-              // Blue zone — logo + tagline
               SafeArea(
                 bottom: false,
                 child: FadeTransition(
                   opacity: _logoFade,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 44, 28, 36),
+                    padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
                     child: _buildLogoArea(),
                   ),
                 ),
               ),
-
-              // White card — clips the slide-up so it never overlaps the logo.
               Expanded(
                 child: ClipRect(
                   child: SlideTransition(
@@ -251,27 +197,29 @@ class _LoginScreenState extends State<LoginScreen>
                     child: Container(
                       width: double.infinity,
                       decoration: const BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(28)),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                       ),
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(28, 36, 28, 48),
+                        padding: const EdgeInsets.fromLTRB(28, 32, 28, 0),
                         child: Form(
                           key: _formKey,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _buildCardHeader(),
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 28),
                               _buildEmailField(auth),
                               const SizedBox(height: 16),
                               _buildPasswordField(auth),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 20),
                               _buildErrorCard(auth),
                               _buildLoginButton(auth),
-                              const SizedBox(height: 30),
+                              const SizedBox(height: 20),
                               _buildRegisterLink(),
+                              const SizedBox(height: 28),
+                              _buildQuickDemoSection(),
+                              const SizedBox(height: 32),
                             ],
                           ),
                         ),
@@ -289,71 +237,73 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ── Section builders ───────────────────────────────────────────────────────
 
-  /// Brand identity — all-caps Bebas Neue wordmark + amber tagline.
   Widget _buildLogoArea() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Pill badge: "SMART PARKING SYSTEM"
-        Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.reserved.withAlpha(38), // amber at ~15 %
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            'SMART PARKING SYSTEM',
-            style: GoogleFonts.manrope(
-              fontSize: 10,
-              color: AppColors.reserved,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.8,
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // Wordmark
-        Text(
-          'SMART\nPARK',
-          style: GoogleFonts.bebasNeue(
-            fontSize: 56,
-            color: Colors.white,
-            letterSpacing: 3,
-            height: 0.95,
-          ),
-        ),
-        const SizedBox(height: 10),
-
-        // Decorative amber rule + tagline
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 24,
-              height: 2.5,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: AppColors.reserved,
-                borderRadius: BorderRadius.circular(2),
+                color: _kButtonColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  'P',
+                  style: GoogleFonts.manrope(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Text(
-              'Park smarter.',
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                color: Colors.white.withAlpha(178), // 70 %
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.3,
+            const SizedBox(width: 12),
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'Smart',
+                    style: GoogleFonts.manrope(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      height: 1,
+                    ),
+                  ),
+                  TextSpan(
+                    text: 'Park',
+                    style: GoogleFonts.manrope(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: _kButtonColor,
+                      height: 1,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'UNIVERSITY PARKING SYSTEM',
+          style: GoogleFonts.manrope(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withAlpha(120),
+            letterSpacing: 2.4,
+          ),
         ),
       ],
     );
   }
 
-  /// Card subtitle — "Welcome back / Sign in…"
   Widget _buildCardHeader() {
     return FadeTransition(
       opacity: _cardHeaderFade,
@@ -361,20 +311,20 @@ class _LoginScreenState extends State<LoginScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Welcome back',
+            'Welcome Back',
             style: GoogleFonts.manrope(
               fontSize: 26,
               fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
+              color: _kCardText,
               height: 1.15,
             ),
           ),
           const SizedBox(height: 5),
           Text(
-            'Sign in to continue',
+            'Sign in to access your parking account',
             style: GoogleFonts.manrope(
               fontSize: 14,
-              color: AppColors.textSecondary,
+              color: _kCardTextSub,
               fontWeight: FontWeight.w400,
             ),
           ),
@@ -383,19 +333,19 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  /// Email text field.
   Widget _buildEmailField(AuthProvider auth) {
     return FadeTransition(
       opacity: _emailFade,
       child: SlideTransition(
         position: _emailSlide,
-        child: _InputField(
+        child: _LightInputField(
           controller: _emailController,
           enabled: !auth.isLoading,
-          hint: 'Email address',
+          hint: 'you@university.edu',
           prefixIcon: Icons.alternate_email_rounded,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
+          accentColor: _kButtonColor,
           validator: (v) {
             if (v == null || v.trim().isEmpty) return 'Email is required';
             if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
@@ -408,41 +358,33 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  /// Password text field with visibility toggle.
   Widget _buildPasswordField(AuthProvider auth) {
     return FadeTransition(
       opacity: _passwordFade,
       child: SlideTransition(
         position: _passwordSlide,
-        child: _InputField(
+        child: _LightInputField(
           controller: _passwordController,
           enabled: !auth.isLoading,
-          hint: 'Password',
+          hint: 'Enter your password',
           prefixIcon: Icons.lock_outline_rounded,
           obscureText: _obscurePassword,
           textInputAction: TextInputAction.done,
           onFieldSubmitted: (_) => _handleLogin(),
+          accentColor: _kButtonColor,
           suffixIcon: IconButton(
             icon: Icon(
               _obscurePassword
                   ? Icons.visibility_outlined
                   : Icons.visibility_off_outlined,
-              color: AppColors.textTertiary,
+              color: _kCardTextSub,
               size: 20,
             ),
             onPressed: () =>
                 setState(() => _obscurePassword = !_obscurePassword),
           ),
           validator: (v) {
-            if (v == null || v.isEmpty) {
-              return 'Password is required';
-            }
-            if (v.length < 8) {
-              return 'Password must be at least 8 characters';
-            }
-            if (!RegExp(r'\d').hasMatch(v)) {
-              return 'Password must contain at least one number';
-            }
+            if (v == null || v.isEmpty) return 'Password is required';
             return null;
           },
         ),
@@ -450,7 +392,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  /// Error card — rendered only when [auth.error] is non-null.
   Widget _buildErrorCard(AuthProvider auth) {
     return AnimatedSize(
       duration: const Duration(milliseconds: 220),
@@ -500,81 +441,61 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  /// Primary login button — Bebas Neue label, scale-on-press, loading state.
   Widget _buildLoginButton(AuthProvider auth) {
     return FadeTransition(
       opacity: _buttonFade,
       child: SlideTransition(
         position: _buttonSlide,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Listener gives us raw pointer events without interfering
-            // with ElevatedButton's own InkWell gesture recognition.
-            Listener(
-              onPointerDown: (_) => setState(() => _buttonPressed = true),
-              onPointerUp: (_) => setState(() => _buttonPressed = false),
-              onPointerCancel: (_) => setState(() => _buttonPressed = false),
-              child: AnimatedScale(
-                scale: _buttonPressed ? 0.97 : 1.0,
-                duration: const Duration(milliseconds: 100),
-                child: SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: auth.isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.background,
-                      disabledBackgroundColor:
-                          AppColors.primary.withAlpha(160),
-                      elevation: 0,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: auth.isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: AppColors.background,
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'LOGIN',
-                                style: GoogleFonts.bebasNeue(
-                                  fontSize: 20,
-                                  letterSpacing: 3.5,
-                                  color: AppColors.background,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              const Icon(
-                                Icons.arrow_forward_rounded,
-                                color: AppColors.background,
-                                size: 18,
-                              ),
-                            ],
-                          ),
+        child: Listener(
+          onPointerDown: (_) => setState(() => _buttonPressed = true),
+          onPointerUp: (_) => setState(() => _buttonPressed = false),
+          onPointerCancel: (_) => setState(() => _buttonPressed = false),
+          child: AnimatedScale(
+            scale: _buttonPressed ? 0.97 : 1.0,
+            duration: const Duration(milliseconds: 100),
+            child: SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: auth.isLoading ? null : _handleLogin,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kButtonColor,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: _kButtonColor.withAlpha(160),
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
+                child: auth.isLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        'Sign In',
+                        style: GoogleFonts.manrope(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  /// "Don't have an account? Register →" link.
   Widget _buildRegisterLink() {
     return FadeTransition(
-      opacity: _buttonFade, // shares the button's stagger timing
+      opacity: _buttonFade,
       child: GestureDetector(
         onTap: () => context.go('/register'),
         child: RichText(
@@ -582,19 +503,19 @@ class _LoginScreenState extends State<LoginScreen>
           text: TextSpan(
             children: [
               TextSpan(
-                text: "Don't have an account?  ",
+                text: "Don't have an account? ",
                 style: GoogleFonts.manrope(
                   fontSize: 14,
-                  color: AppColors.textSecondary,
+                  color: _kCardTextSub,
                   fontWeight: FontWeight.w400,
                 ),
               ),
               TextSpan(
-                text: 'Register →',
+                text: 'Register',
                 style: GoogleFonts.manrope(
                   fontSize: 14,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
+                  color: _kCardText,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
@@ -603,19 +524,109 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
+
+  Widget _buildQuickDemoSection() {
+    return FadeTransition(
+      opacity: _buttonFade,
+      child: Container(
+        decoration: BoxDecoration(
+          color: _kDemoBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kFieldBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              child: Text(
+                'QUICK DEMO ACCESS',
+                style: GoogleFonts.manrope(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: _kCardTextSub,
+                  letterSpacing: 1.8,
+                ),
+              ),
+            ),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+            ..._demoUsers.asMap().entries.map((entry) {
+              final i = entry.key;
+              final user = entry.value;
+              final isLast = i == _demoUsers.length - 1;
+              return Column(
+                children: [
+                  InkWell(
+                    onTap: () => _fillDemo(user),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: isLast ? const Radius.circular(16) : Radius.zero,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 13),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              user.email,
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: _kCardText,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: user.badgeColor,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              user.role,
+                              style: GoogleFonts.manrope(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (!isLast)
+                    const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+                ],
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-// ── Private widget ─────────────────────────────────────────────────────────────
+// ── Data ───────────────────────────────────────────────────────────────────────
 
-/// Reusable input field styled for the white card (light-gray fill, 14 px radius).
-///
-/// Extracted to a [StatelessWidget] to keep build methods readable without
-/// creating a separate file for a single-screen component.
-class _InputField extends StatelessWidget {
-  const _InputField({
+class _DemoUser {
+  final String email;
+  final String password;
+  final String role;
+  final Color badgeColor;
+  const _DemoUser(this.email, this.password, this.role, this.badgeColor);
+}
+
+// ── Light-themed input field for the white card ────────────────────────────────
+
+class _LightInputField extends StatelessWidget {
+  const _LightInputField({
     required this.controller,
     required this.hint,
     required this.prefixIcon,
+    required this.accentColor,
     this.enabled = true,
     this.obscureText = false,
     this.keyboardType,
@@ -628,6 +639,7 @@ class _InputField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
   final IconData prefixIcon;
+  final Color accentColor;
   final bool enabled;
   final bool obscureText;
   final TextInputType? keyboardType;
@@ -636,8 +648,12 @@ class _InputField extends StatelessWidget {
   final Widget? suffixIcon;
   final FormFieldValidator<String>? validator;
 
-  static const _radius = 14.0;
-  static const _fill = AppColors.surfaceHighlight;
+  static const _radius    = 14.0;
+  static const _fill      = Color(0xFFF3F4F8);
+  static const _border    = Color(0xFFE5E7EB);
+  static const _textColor = Color(0xFF1A2035);
+  static const _hintColor = Color(0xFF9CA3AF);
+  static const _iconColor = Color(0xFF9CA3AF);
 
   @override
   Widget build(BuildContext context) {
@@ -651,17 +667,16 @@ class _InputField extends StatelessWidget {
       style: GoogleFonts.manrope(
         fontSize: 15,
         fontWeight: FontWeight.w500,
-        color: AppColors.textPrimary,
+        color: _textColor,
       ),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: GoogleFonts.manrope(
           fontSize: 15,
-          color: AppColors.textTertiary,
+          color: _hintColor,
           fontWeight: FontWeight.w400,
         ),
-        prefixIcon:
-            Icon(prefixIcon, color: AppColors.textSecondary, size: 20),
+        prefixIcon: Icon(prefixIcon, color: _iconColor, size: 20),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: _fill,
@@ -670,16 +685,15 @@ class _InputField extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 52),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: const BorderSide(color: _border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: const BorderSide(color: _border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
-          borderSide:
-              const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(color: accentColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
@@ -687,8 +701,7 @@ class _InputField extends StatelessWidget {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
-          borderSide:
-              const BorderSide(color: AppColors.error, width: 2),
+          borderSide: const BorderSide(color: AppColors.error, width: 2),
         ),
         errorStyle: GoogleFonts.manrope(
           fontSize: 12,
@@ -703,22 +716,16 @@ class _InputField extends StatelessWidget {
 
 // ── Painter ────────────────────────────────────────────────────────────────────
 
-/// Draws subtle diagonal stripes across the full screen.
-///
-/// The fill colour is white at ~4 % opacity so stripes read only on
-/// the deep-blue header panel (they're invisible on the white card).
 class _DiagonalStripePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withAlpha(10) // ≈ 4 %
+      ..color = Colors.white.withAlpha(10)
       ..style = PaintingStyle.fill;
 
     const stripeWidth = 26.0;
     const gap = 58.0;
 
-    // Iterate from left of screen minus full-height offset so stripes
-    // cover the top-left corner cleanly.
     for (double x = -size.height; x < size.width + size.height; x += stripeWidth + gap) {
       final path = Path()
         ..moveTo(x, 0)

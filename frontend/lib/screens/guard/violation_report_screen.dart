@@ -1,23 +1,14 @@
-// violation_report_screen.dart — S26: Guard reports a parking violation by plate
-// number. Shows a form then transitions in-place to a suspension result card.
+// violation_report_screen.dart — S26: Guard reports a parking violation
+// Light gray background, white fields, radio-style violation cards, result state.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../config/colors.dart';
-import '../../config/app_typography.dart';
-import '../../config/app_spacing.dart';
 import '../../models/violation_result.dart';
 import '../../providers/guard_provider.dart';
 
-/// S26 — Violation Report screen.
-///
-/// Presents a two-state view:
-/// - Form state: plate input, violation type selector, optional notes, submit.
-/// - Result state: suspension details returned from [GuardProvider.lastViolationResult].
-///
-/// Both states live in the same route — no navigation occurs on submit.
 class ViolationReportScreen extends StatefulWidget {
   const ViolationReportScreen({super.key});
 
@@ -26,11 +17,26 @@ class ViolationReportScreen extends StatefulWidget {
 }
 
 class _ViolationReportScreenState extends State<ViolationReportScreen> {
-  final TextEditingController _plateController = TextEditingController();
-  final TextEditingController _notesController  = TextEditingController();
-
+  final _plateController = TextEditingController();
+  final _notesController  = TextEditingController();
   String? _selectedType;
   bool    _submitted = false;
+
+  static const _kPageBg   = Color(0xFFEEF1F7);
+  static const _kCardText = Color(0xFF1A2035);
+  static const _kCardSub  = Color(0xFF6B7280);
+  static const _kLabel    = Color(0xFF374151);
+
+  static const _types = [
+    _VType('NO_RESERVATION',  'No Reservation',
+        'Vehicle in spot without active reservation'),
+    _VType('WRONG_SPOT',      'Wrong Spot',
+        'Vehicle parked in a different spot than reserved'),
+    _VType('UNAUTHORIZED',    'Unauthorized Vehicle',
+        'Plate not registered to any active badge'),
+    _VType('IDLING',          'Idling',
+        'Vehicle blocking spot with engine running'),
+  ];
 
   @override
   void initState() {
@@ -45,37 +51,6 @@ class _ViolationReportScreenState extends State<ViolationReportScreen> {
     super.dispose();
   }
 
-  // ── Violation types ───────────────────────────────────────────────────────
-
-  static const _types = [
-    _ViolationType(
-      value:    'NO_RESERVATION',
-      title:    'No Reservation',
-      subtitle: 'Car parked without valid reservation',
-      icon:     LucideIcons.xCircle,
-    ),
-    _ViolationType(
-      value:    'WRONG_SPOT',
-      title:    'Wrong Spot',
-      subtitle: 'Car parked in a different spot than reserved',
-      icon:     LucideIcons.mapPinOff,
-    ),
-    _ViolationType(
-      value:    'UNAUTHORIZED',
-      title:    'Unauthorized',
-      subtitle: 'Vehicle not registered under any badge',
-      icon:     LucideIcons.shieldOff,
-    ),
-    _ViolationType(
-      value:    'IDLING',
-      title:    'Idling',
-      subtitle: 'Vehicle occupying spot without parking',
-      icon:     LucideIcons.timer,
-    ),
-  ];
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
   String _badgeName(String type) {
     switch (type) {
       case 'CARPOOL_2': return 'Carpool 2';
@@ -88,15 +63,13 @@ class _ViolationReportScreenState extends State<ViolationReportScreen> {
 
   String _formatDate(DateTime dt) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan','Feb','Mar','Apr','May','Jun',
+      'Jul','Aug','Sep','Oct','Nov','Dec',
     ];
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year} at $h:$m';
   }
-
-  // ── Actions ───────────────────────────────────────────────────────────────
 
   Future<void> _handleSubmit() async {
     final plate = _plateController.text.trim().toUpperCase();
@@ -120,39 +93,17 @@ class _ViolationReportScreenState extends State<ViolationReportScreen> {
   void _resetForm() {
     _plateController.clear();
     _notesController.clear();
-    setState(() {
-      _selectedType = null;
-      _submitted    = false;
-    });
-    context.read<GuardProvider>().clearViolationResult();
-    context.read<GuardProvider>().clearOperationError();
+    setState(() { _selectedType = null; _submitted = false; });
+    context.read<GuardProvider>()
+      ..clearViolationResult()
+      ..clearOperationError();
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<GuardProvider>();
-
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation:       0,
-        leading: _submitted
-            ? const SizedBox.shrink()
-            : IconButton(
-                icon: const Icon(LucideIcons.arrowLeft,
-                    color: AppColors.textSecondary),
-                onPressed: () => context.pop(),
-              ),
-        title: Text('Report Violation', style: AppTypography.displaySmall),
-        centerTitle: true,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: AppColors.divider),
-        ),
-      ),
+      backgroundColor: _kPageBg,
       body: _submitted
           ? _buildResult(provider.lastViolationResult!)
           : _buildForm(provider),
@@ -162,142 +113,155 @@ class _ViolationReportScreenState extends State<ViolationReportScreen> {
   // ── Form ──────────────────────────────────────────────────────────────────
 
   Widget _buildForm(GuardProvider provider) {
-    final bool canSubmit = _plateController.text.trim().isNotEmpty
+    final canSubmit = _plateController.text.trim().isNotEmpty
         && _selectedType != null
         && !provider.isReportingViolation;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.screenH),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
-
-          // ── Plate input ──────────────────────────────────────────────────
-          Text('License Plate',
-              style: AppTypography.labelMedium
-                  .copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 8),
+          // ── License plate ─────────────────────────────────────────────────
+          _SectionLabel('LICENSE PLATE'),
+          const SizedBox(height: 10),
           TextField(
-            controller:         _plateController,
+            controller: _plateController,
             textCapitalization: TextCapitalization.characters,
             style: GoogleFonts.jetBrainsMono(
-              fontSize:      14,
-              fontWeight:    FontWeight.w500,
-              color:         AppColors.textPrimary,
-              letterSpacing: 1.2,
+              fontSize: 22, fontWeight: FontWeight.w700,
+              color: _kCardText, letterSpacing: 3,
             ),
             decoration: InputDecoration(
-              hintText:   'e.g. ABC 1234',
-              hintStyle:  AppTypography.bodyMedium,
-              filled:     true,
-              fillColor:  AppColors.surfaceLight,
-              prefixIcon: const Icon(LucideIcons.car,
-                  size: 20, color: AppColors.textTertiary),
+              hintText: 'ABC 1234',
+              hintStyle: GoogleFonts.jetBrainsMono(
+                fontSize: 22, color: Colors.black26, letterSpacing: 3,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 18),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
-                borderSide: const BorderSide(color: AppColors.divider),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
-                borderSide: const BorderSide(color: AppColors.divider),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
-                borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                    color: Color(0xFF374151), width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 14),
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // ── Violation type ───────────────────────────────────────────────
-          Text('Violation Type',
-              style: AppTypography.labelMedium
-                  .copyWith(color: AppColors.textSecondary)),
+          // ── Violation type ────────────────────────────────────────────────
+          _SectionLabel('VIOLATION TYPE'),
           const SizedBox(height: 10),
-          ..._types.map((t) => _ViolationTypeCard(
-                type:       t,
-                isSelected: _selectedType == t.value,
-                onTap:      () => setState(() => _selectedType = t.value),
+
+          ..._types.map((t) => _ViolationCard(
+            type: t,
+            isSelected: _selectedType == t.value,
+            onTap: () => setState(() => _selectedType = t.value),
+          )),
+
+          const SizedBox(height: 20),
+
+          // ── Notes ─────────────────────────────────────────────────────────
+          Row(
+            children: [
+              Text('NOTES', style: GoogleFonts.manrope(
+                fontSize: 11, fontWeight: FontWeight.w700,
+                color: _kLabel, letterSpacing: 1.2,
               )),
-
-          const SizedBox(height: 24),
-
-          // ── Notes ────────────────────────────────────────────────────────
-          Text('Notes (optional)',
-              style: AppTypography.labelMedium
-                  .copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 8),
+              const SizedBox(width: 6),
+              Text('(OPTIONAL)', style: GoogleFonts.manrope(
+                fontSize: 11, color: _kCardSub, letterSpacing: 1.2,
+              )),
+            ],
+          ),
+          const SizedBox(height: 10),
           TextField(
             controller: _notesController,
-            maxLines:   3,
-            style: AppTypography.bodyMedium
-                .copyWith(color: AppColors.textPrimary),
+            maxLines: 4,
+            style: GoogleFonts.manrope(fontSize: 14, color: _kCardText),
             decoration: InputDecoration(
-              hintText:  'Additional details about the violation...',
-              hintStyle: AppTypography.bodyMedium,
-              filled:    true,
-              fillColor: AppColors.surfaceLight,
+              hintText: 'Additional context or observations...',
+              hintStyle: GoogleFonts.manrope(
+                  fontSize: 14, color: Colors.black38),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.all(16),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
-                borderSide: const BorderSide(color: AppColors.divider),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
-                borderSide: const BorderSide(color: AppColors.divider),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
-                    color: AppColors.error, width: 1.5),
+                    color: Color(0xFF374151), width: 2),
               ),
-              contentPadding: const EdgeInsets.all(14),
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          // ── Submit button ────────────────────────────────────────────────
+          // ── Submit button ─────────────────────────────────────────────────
           SizedBox(
-            width:  double.infinity,
-            height: AppSpacing.buttonHeight,
+            width: double.infinity, height: 52,
             child: ElevatedButton(
               onPressed: canSubmit ? _handleSubmit : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor:         AppColors.error,
-                disabledBackgroundColor: AppColors.divider,
-                foregroundColor:         AppColors.background,
-                elevation:               0,
+                backgroundColor: AppColors.error,
+                disabledBackgroundColor: const Color(0xFFDDE2EE),
+                foregroundColor: Colors.white,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.buttonRadius),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: provider.isReportingViolation
-                  ? const SizedBox(
-                      width:  20,
-                      height: 20,
+                  ? const SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2),
-                    )
+                          color: Colors.white, strokeWidth: 2))
                   : Text(
                       'Submit Violation Report',
-                      style: AppTypography.labelLarge
-                          .copyWith(color: AppColors.background),
+                      style: GoogleFonts.manrope(
+                        fontSize: 15, fontWeight: FontWeight.w700,
+                        color: canSubmit
+                            ? Colors.white
+                            : const Color(0xFF9CA3AF),
+                      ),
                     ),
             ),
           ),
 
-          // ── Operation error ──────────────────────────────────────────────
           if (provider.operationError != null) ...[
             const SizedBox(height: 12),
-            _ErrorBox(message: provider.operationError!),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withAlpha(15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(children: [
+                const Icon(LucideIcons.alertCircle,
+                    size: 16, color: AppColors.error),
+                const SizedBox(width: 8),
+                Expanded(child: Text(provider.operationError!,
+                    style: GoogleFonts.manrope(
+                        color: AppColors.error, fontSize: 13))),
+              ]),
+            ),
           ],
-
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -307,174 +271,123 @@ class _ViolationReportScreenState extends State<ViolationReportScreen> {
 
   Widget _buildResult(ViolationResult result) {
     final plural = result.suspensionDays == 1 ? '' : 's';
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.screenH),
+      padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 24),
-
-          // Icon
           Container(
-            width:  80,
-            height: 80,
+            width: 80, height: 80,
             decoration: BoxDecoration(
-              color: AppColors.error.withValues(alpha: 0.10),
+              color: AppColors.error.withAlpha(20),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              LucideIcons.shieldAlert,
-              size:  44,
-              color: AppColors.error,
-            ),
+            child: const Icon(LucideIcons.shieldAlert,
+                size: 40, color: AppColors.error),
           ),
-
           const SizedBox(height: 20),
-
-          Text(
-            'Violation Reported',
-            style: AppTypography.displaySmall
-                .copyWith(color: AppColors.textPrimary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Badge has been automatically suspended',
-            style: AppTypography.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-
+          Text('Violation Reported',
+              style: GoogleFonts.manrope(
+                fontSize: 22, fontWeight: FontWeight.w800, color: _kCardText),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 6),
+          Text('Badge has been automatically suspended',
+              style: GoogleFonts.manrope(fontSize: 14, color: _kCardSub),
+              textAlign: TextAlign.center),
           const SizedBox(height: 24),
 
           // Result card
           Container(
-            width:       double.infinity,
-            padding:     const EdgeInsets.all(AppSpacing.cardPadding),
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color:        AppColors.surfaceLight,
-              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(8),
+                  blurRadius: 8, offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               children: [
-                _ResultRow(
-                  label: 'Badge ID',
-                  value: '#${result.badgeId}',
-                ),
-                const Divider(height: 16, color: AppColors.divider),
-                _ResultRow(
-                  label: 'Badge Type',
-                  value: _badgeName(result.badgeType),
-                ),
-                const Divider(height: 16, color: AppColors.divider),
-                _ResultRow(
-                  label: 'Suspension',
-                  value: '${result.suspensionDays} day$plural',
-                ),
-                const Divider(height: 16, color: AppColors.divider),
-                _ResultRow(
-                  label: 'Suspended Until',
-                  value: _formatDate(result.suspendedUntil),
-                ),
-                const Divider(height: 16, color: AppColors.divider),
-                _ResultRow(
-                  label: 'Affected Students',
-                  value: result.affectedStudents.join(', '),
-                ),
+                _Row('Badge ID', '#${result.badgeId}'),
+                const Divider(height: 20, color: Color(0xFFF0F0F0)),
+                _Row('Badge Type', _badgeName(result.badgeType)),
+                const Divider(height: 20, color: Color(0xFFF0F0F0)),
+                _Row('Suspension', '${result.suspensionDays} day$plural'),
+                const Divider(height: 20, color: Color(0xFFF0F0F0)),
+                _Row('Suspended Until', _formatDate(result.suspendedUntil)),
+                const Divider(height: 20, color: Color(0xFFF0F0F0)),
+                _Row('Affected Students',
+                    result.affectedStudents.join(', ')),
               ],
             ),
           ),
 
           const SizedBox(height: 16),
-
-          // Suspension pill
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color:        AppColors.error.withValues(alpha: 0.15),
+              color: AppColors.error.withAlpha(18),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               'Suspended for ${result.suspensionDays} day$plural',
-              style:
-                  AppTypography.labelMedium.copyWith(color: AppColors.error),
+              style: GoogleFonts.manrope(
+                  fontSize: 13, fontWeight: FontWeight.w600,
+                  color: AppColors.error),
             ),
           ),
 
           const SizedBox(height: 32),
-
-          // Report another
           SizedBox(
-            width:  double.infinity,
-            height: AppSpacing.buttonHeight,
+            width: double.infinity, height: 52,
             child: ElevatedButton(
               onPressed: _resetForm,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
-                foregroundColor: AppColors.background,
-                elevation:       0,
+                foregroundColor: Colors.white,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.buttonRadius),
-                ),
+                    borderRadius: BorderRadius.circular(14)),
               ),
-              child: Text(
-                'Report Another Violation',
-                style: AppTypography.labelLarge
-                    .copyWith(color: AppColors.background),
-              ),
+              child: Text('Report Another Violation',
+                  style: GoogleFonts.manrope(
+                      fontSize: 15, fontWeight: FontWeight.w700,
+                      color: Colors.white)),
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // Back to dashboard
           SizedBox(
-            width:  double.infinity,
-            height: AppSpacing.buttonHeight,
+            width: double.infinity, height: 52,
             child: TextButton(
               onPressed: () => context.go('/guard/home'),
-              child: Text(
-                'Back to Dashboard',
-                style: AppTypography.labelLarge
-                    .copyWith(color: AppColors.textSecondary),
-              ),
+              child: Text('Back to Dashboard',
+                  style: GoogleFonts.manrope(
+                      fontSize: 15, color: _kCardSub,
+                      fontWeight: FontWeight.w500)),
             ),
           ),
-
-          const SizedBox(height: 24),
         ],
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Violation type card
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-class _ViolationType {
-  final String   value;
-  final String   title;
-  final String   subtitle;
-  final IconData icon;
-  const _ViolationType({
-    required this.value,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
+class _VType {
+  final String value, title, subtitle;
+  const _VType(this.value, this.title, this.subtitle);
 }
 
-class _ViolationTypeCard extends StatelessWidget {
-  final _ViolationType type;
-  final bool           isSelected;
-  final VoidCallback   onTap;
-
-  const _ViolationTypeCard({
-    required this.type,
-    required this.isSelected,
-    required this.onTap,
+class _ViolationCard extends StatelessWidget {
+  final _VType type;
+  final bool   isSelected;
+  final VoidCallback onTap;
+  const _ViolationCard({
+    required this.type, required this.isSelected, required this.onTap,
   });
 
   @override
@@ -483,45 +396,61 @@ class _ViolationTypeCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.error.withValues(alpha: 0.10)
-              : AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(10),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.error : AppColors.divider,
-            width: 2,
+            color: isSelected ? AppColors.error : const Color(0xFFE5E7EB),
+            width: isSelected ? 2 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(6),
+              blurRadius: 6, offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            Icon(
-              type.icon,
-              size:  22,
-              color: isSelected ? AppColors.error : AppColors.textTertiary,
+            // Radio circle
+            Container(
+              width: 20, height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.error
+                      : const Color(0xFFD1D5DB),
+                  width: isSelected ? 6 : 1.5,
+                ),
+              ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
+            // Text
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    type.title,
-                    style: AppTypography.bodyMedium
-                        .copyWith(color: AppColors.textPrimary),
-                  ),
+                  Text(type.title,
+                      style: GoogleFonts.manrope(
+                        fontSize: 14, fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1A2035),
+                      )),
                   const SizedBox(height: 2),
-                  Text(type.subtitle, style: AppTypography.bodySmall),
+                  Text(type.subtitle,
+                      style: GoogleFonts.manrope(
+                          fontSize: 12, color: const Color(0xFF6B7280))),
                 ],
               ),
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              const Icon(LucideIcons.checkCircle2,
-                  size: 18, color: AppColors.error),
-            ],
+            const SizedBox(width: 10),
+            Icon(LucideIcons.alertTriangle,
+                size: 18,
+                color: isSelected
+                    ? AppColors.error.withAlpha(180)
+                    : const Color(0xFFD1D5DB)),
           ],
         ),
       ),
@@ -529,69 +458,40 @@ class _ViolationTypeCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Result info row
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ResultRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _ResultRow({required this.label, required this.value});
-
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: AppTypography.bodySmall
-                .copyWith(color: AppColors.textSecondary)),
-        const SizedBox(width: 16),
-        Flexible(
-          child: Text(
-            value,
-            style: AppTypography.bodyMedium
-                .copyWith(color: AppColors.textPrimary),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
-    );
+    return Text(text,
+        style: GoogleFonts.manrope(
+          fontSize: 11, fontWeight: FontWeight.w700,
+          color: const Color(0xFF374151), letterSpacing: 1.2,
+        ));
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared error box
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ErrorBox extends StatelessWidget {
-  final String message;
-  const _ErrorBox({required this.message});
-
+class _Row extends StatelessWidget {
+  final String label, value;
+  const _Row(this.label, this.value);
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color:        AppColors.error.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusSmall),
-        border:       Border.all(color: AppColors.error.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        children: [
-          const Icon(LucideIcons.alertCircle,
-              size: 16, color: AppColors.error),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style:
-                  AppTypography.bodySmall.copyWith(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.manrope(
+            fontSize: 13, color: const Color(0xFF6B7280))),
+        const SizedBox(width: 16),
+        Flexible(
+          child: Text(value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.manrope(
+                fontSize: 13, fontWeight: FontWeight.w600,
+                color: const Color(0xFF1A2035),
+              )),
+        ),
+      ],
     );
   }
 }

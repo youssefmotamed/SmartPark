@@ -34,6 +34,17 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
   late final AnimationController _shimmerController;
   late final Animation<double>   _shimmerOpacity;
 
+  // Tracks last successful poll time for "Updated X ago" display
+  int       _lastKnownTick = -1;
+  DateTime? _lastUpdatedAt;
+
+  String _updatedText() {
+    if (_lastUpdatedAt == null) return 'Loading…';
+    final secs = DateTime.now().difference(_lastUpdatedAt!).inSeconds;
+    if (secs < 60) return 'Updated ${secs}s ago';
+    return 'Updated ${(secs / 60).floor()}m ago';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -169,6 +180,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
     final reservation = context.watch<ReservationProvider>().activeReservation;
     context.watch<AuthProvider>();
 
+    // Track last successful poll for timestamp display
+    if (spots.refreshTick != _lastKnownTick && spots.spots.isNotEmpty) {
+      _lastKnownTick = spots.refreshTick;
+      _lastUpdatedAt = DateTime.now();
+    }
+
     final zoneASpots = spots.spotsForZone('A');
     final zoneBSpots = spots.spotsForZone('B');
     final zoneCSpots = spots.spotsForZone('C');
@@ -178,45 +195,28 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Map container — shrinks to content ────────────────────────────
-          Container(
-            margin: const EdgeInsets.fromLTRB(
+          // ── Map container — shrinks to content, no ConstrainedBox ────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
               AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
             ),
             child: Stack(
               children: [
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.62,
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF13161F),
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                   ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF13161F),
-                      borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                    ),
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: _buildMapBody(spots, zoneASpots, zoneBSpots, zoneCSpots),
-                  ),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: _buildMapBody(spots, zoneASpots, zoneBSpots, zoneCSpots),
                 ),
-                // Polling indicator
+                // Polling dot
                 Positioned(
                   top: 10,
                   right: 10,
                   child: _PollingDot(refreshTick: spots.refreshTick),
                 ),
               ],
-            ),
-          ),
-
-          // ── Geo banner ────────────────────────────────────────────────────
-          AnimatedOpacity(
-            opacity: spots.isTooFar ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 300),
-            child: AnimatedSlide(
-              offset: spots.isTooFar ? Offset.zero : const Offset(0, -0.5),
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic,
-              child: spots.isTooFar ? _buildGeoBanner() : const SizedBox.shrink(),
             ),
           ),
 
@@ -233,7 +233,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
 
           // ── Legend ────────────────────────────────────────────────────────
           _buildLegend(),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: 8),
+
+          // ── Geo / proximity row ───────────────────────────────────────────
+          _buildGeoRow(spots),
+          const SizedBox(height: AppSpacing.sm),
         ],
       ),
     );
@@ -261,8 +265,37 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
   ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // ── Entrance gate pill ─────────────────────────────────────────────
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.reserved.withAlpha(28),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.reserved.withAlpha(80)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(LucideIcons.arrowUpCircle,
+                    size: 13, color: AppColors.reserved),
+                const SizedBox(width: 6),
+                Text(
+                  'ENTRANCE GATE',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.reserved,
+                    fontSize: 10,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
         // ── Zone A label (long-press = geo bypass) ─────────────────────────
         GestureDetector(
           onLongPress: () {
@@ -272,8 +305,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
             );
           },
           child: Text(
-            'ZONE A',
-            style: AppTypography.labelSmall.copyWith(color: AppColors.textTertiary),
+            'ZONE A — MAIN PARKING',
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textTertiary,
+              letterSpacing: 0.8,
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -288,20 +324,42 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
           )).toList(),
         ),
 
-        // ── Road divider ───────────────────────────────────────────────────
+        // ── Flow arrows ────────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.only(top: 8, bottom: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (i) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                size: 14,
+                color: AppColors.textTertiary.withAlpha(160),
+              ),
+            )),
+          ),
+        ),
+
+        // ── Campus road divider ─────────────────────────────────────────────
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(10),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.divider.withAlpha(60)),
+          ),
           child: Row(
             children: [
               const Expanded(child: _DashedDivider()),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Text(
-                  'ROAD',
+                  'CAMPUS ROAD',
                   style: AppTypography.bodySmall.copyWith(
                     color: AppColors.textTertiary,
-                    letterSpacing: 2,
-                    fontSize: 10,
+                    letterSpacing: 2.0,
+                    fontSize: 9,
                   ),
                 ),
               ),
@@ -321,9 +379,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ZONE B',
+                      'ZONE B — CARPOOL',
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.textTertiary,
+                        letterSpacing: 0.8,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -352,9 +411,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'ZONE C',
+                    'ZONE C — GUEST',
                     style: AppTypography.labelSmall.copyWith(
                       color: AppColors.textTertiary,
+                      letterSpacing: 0.8,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -365,6 +425,19 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
                 ],
               ),
             ],
+          ),
+        ),
+
+        // ── Updated timestamp ──────────────────────────────────────────────
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            _updatedText(),
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textTertiary,
+              fontSize: 10,
+            ),
           ),
         ),
       ],
@@ -426,25 +499,41 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
     );
   }
 
-  // ── Geo banner ────────────────────────────────────────────────────────────────
+  // ── Persistent geo / proximity row ───────────────────────────────────────────
 
-  Widget _buildGeoBanner() {
-    return Container(
-      height: 44,
-      margin: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, 0),
-      decoration: BoxDecoration(
-        color: AppColors.warning.withAlpha(25),
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusSmall),
-        border: Border.all(color: AppColors.warning.withAlpha(76)),
-      ),
+  Widget _buildGeoRow(SpotsProvider spots) {
+    final isNear = !spots.isTooFar;
+    final label  = isNear ? 'Near campus' : 'Too far — view only';
+    final color  = isNear ? const Color(0xFF26A69A) : AppColors.warning;
+
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Row(
         children: [
-          const Icon(LucideIcons.mapPin, size: 16, color: AppColors.warning),
-          const SizedBox(width: 8),
+          Icon(LucideIcons.mapPin, size: 13, color: AppColors.textTertiary),
+          const SizedBox(width: 6),
           Text(
-            "You're too far to reserve. View only.",
-            style: AppTypography.bodySmall.copyWith(color: AppColors.warning),
+            'Campus proximity',
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textTertiary,
+              fontSize: 12,
+            ),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              label,
+              style: AppTypography.labelSmall.copyWith(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -516,7 +605,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen>
       (AppColors.available,   'Available'),
       (AppColors.reserved,    'Reserved'),
       (AppColors.occupied,    'Occupied'),
-      (AppColors.unavailable, 'Unavailable'),
+      (AppColors.unavailable, 'N/A'),
     ];
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,

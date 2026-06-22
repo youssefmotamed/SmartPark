@@ -5,18 +5,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../config/colors.dart';
-import '../../config/app_typography.dart';
 import '../../config/app_spacing.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/notification_bell.dart';
 import 'guard_home_screen.dart';
+import 'active_reservations_screen.dart';
+import 'guest_parking_screen.dart';
+import 'violation_report_screen.dart';
 
-/// Persistent layout wrapper for all guard screens.
-///
-/// Provides a custom top bar (wordmark + "Guard Dashboard" subtitle + bell)
-/// and a 4-tab bottom navigation bar with amber [AppColors.warning] accent.
-/// Uses [IndexedStack] so each tab's scroll position is preserved.
 class GuardShell extends StatefulWidget {
   const GuardShell({super.key});
 
@@ -32,17 +28,12 @@ class _GuardShellState extends State<GuardShell>
 
   static const _navItems = [
     _NavItem(icon: LucideIcons.qrCode,        label: 'Scan'),
-    _NavItem(icon: LucideIcons.clock,          label: 'Active'),
-    _NavItem(icon: LucideIcons.userPlus,       label: 'Guest'),
+    _NavItem(icon: LucideIcons.clipboardList,  label: 'Active'),
+    _NavItem(icon: LucideIcons.car,            label: 'Guest'),
     _NavItem(icon: LucideIcons.alertTriangle,  label: 'Violations'),
   ];
 
-  static const _screens = [
-    GuardHomeScreen(),
-    _TabPlaceholder(title: 'Active Reservations', icon: LucideIcons.clock,         note: 'Coming in Phase 2'),
-    _TabPlaceholder(title: 'Guest Parking',       icon: LucideIcons.userPlus,      note: 'Coming in Phase 2'),
-    _TabPlaceholder(title: 'Violations',          icon: LucideIcons.alertTriangle, note: 'Coming in Phase 2'),
-  ];
+  late final List<Widget> _screens;
 
   late final List<AnimationController> _tabControllers;
   late final List<Animation<double>> _tabAnimations;
@@ -50,6 +41,12 @@ class _GuardShellState extends State<GuardShell>
   @override
   void initState() {
     super.initState();
+    _screens = [
+      GuardHomeScreen(onTabChange: _onTabTapped),
+      const ActiveReservationsScreen(),
+      const GuestParkingScreen(),
+      const ViolationReportScreen(),
+    ];
     _tabControllers = List.generate(
       _navItems.length,
       (_) => AnimationController(
@@ -89,7 +86,6 @@ class _GuardShellState extends State<GuardShell>
         children: [
           _TopBar(
             accent: _accent,
-            subtitle: 'Guard Dashboard',
             onBellTap: () => context.go('/guard/notifications'),
           ),
           Expanded(
@@ -117,14 +113,15 @@ class _GuardShellState extends State<GuardShell>
 
 class _TopBar extends StatelessWidget {
   final Color accent;
-  final String subtitle;
   final VoidCallback onBellTap;
 
   const _TopBar({
     required this.accent,
-    required this.subtitle,
     required this.onBellTap,
   });
+
+  static const _kBadgeAmber  = Color(0xFFEDB82A);
+  static const _kGuardGreen  = Color(0xFF2D5016);
 
   @override
   Widget build(BuildContext context) {
@@ -138,66 +135,68 @@ class _TopBar extends StatelessWidget {
       ),
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: Border(
-          bottom: BorderSide(color: AppColors.divider, width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.divider, width: 1)),
       ),
       child: Row(
         children: [
-          // Wordmark + subtitle
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Smart',
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    Text(
-                      'Park',
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: accent,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                  ],
+          // P badge
+          Container(
+            width: 34, height: 34,
+            decoration: BoxDecoration(
+              color: _kBadgeAmber,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                'P',
+                style: GoogleFonts.manrope(
+                  fontSize: 20, fontWeight: FontWeight.w900,
+                  color: Colors.white, height: 1,
                 ),
-                Text(
-                  subtitle,
-                  style: AppTypography.bodySmall.copyWith(color: accent.withAlpha(180)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // SmartPark wordmark
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Smart',
+                  style: GoogleFonts.manrope(
+                    fontSize: 20, fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary, height: 1,
+                  ),
+                ),
+                TextSpan(
+                  text: 'Park',
+                  style: GoogleFonts.manrope(
+                    fontSize: 20, fontWeight: FontWeight.w800,
+                    color: _kBadgeAmber, height: 1,
+                  ),
                 ),
               ],
             ),
           ),
-          // Bell
-          NotificationBell(onTap: onBellTap),
           const SizedBox(width: 8),
-          // Logout
-          GestureDetector(
-            onTap: () async {
-              await context.read<AuthProvider>().logout();
-              if (context.mounted) context.go('/login');
-            },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+          // GUARD role chip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: _kGuardGreen,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              'GUARD',
+              style: GoogleFonts.manrope(
+                fontSize: 9, fontWeight: FontWeight.w700,
+                color: Colors.white, letterSpacing: 0.8,
               ),
-              child: const Icon(LucideIcons.logOut, size: 18, color: AppColors.error),
             ),
           ),
+          const Spacer(),
+          // Notification bell
+          NotificationBell(onTap: onBellTap),
         ],
       ),
     );
@@ -271,7 +270,7 @@ class _BottomNav extends StatelessWidget {
               const SizedBox(height: 3),
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 180),
-                style: AppTypography.labelSmall.copyWith(
+                style: TextStyle(
                   fontSize: 10,
                   color: isActive ? accent : AppColors.textTertiary,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
@@ -296,42 +295,3 @@ class _NavItem {
   const _NavItem({required this.icon, required this.label});
 }
 
-/// Generic placeholder for tabs not yet implemented.
-class _TabPlaceholder extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final String note;
-
-  const _TabPlaceholder({
-    required this.title,
-    required this.icon,
-    required this.note,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.warning.withAlpha(40),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(icon, size: 36, color: AppColors.warning),
-            ),
-            const SizedBox(height: 20),
-            Text(title, style: AppTypography.displaySmall),
-            const SizedBox(height: 8),
-            Text(note, style: AppTypography.bodyMedium),
-          ],
-        ),
-      ),
-    );
-  }
-}

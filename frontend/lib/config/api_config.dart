@@ -6,8 +6,10 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   const ApiConfig._();
 
-  /// Backend base URL (Android emulator → host localhost).
-  static const String baseUrl = 'http://192.168.1.30:8080/api/v1';
+  /// Backend base URL.
+  /// iOS Simulator: localhost resolves to Mac directly.
+  /// Android emulator: use 10.0.2.2. Physical device: use machine's LAN IP.
+  static const String baseUrl = 'http://192.168.1.14:8080/api/v1';
 
   /// HTTP request timeout in seconds.
   static const int timeoutSeconds = 30;

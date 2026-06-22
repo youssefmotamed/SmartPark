@@ -1,4 +1,5 @@
-// spot_tile.dart — Single parking spot tile widget for the SmartPark map
+// spot_tile.dart — Single parking spot tile for the SmartPark map
+// Tall card: AVAILABLE shows dot only, OCCUPIED shows car icon, RESERVED shows clock icon.
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -6,13 +7,6 @@ import '../models/spot.dart';
 import '../config/app_spacing.dart';
 import 'error_dialog.dart';
 
-/// A single parking spot on the map.
-///
-/// - Normal: solid border + filled background
-/// - [isMuted] (Zone B, individual badge): dashed border, 45% opacity
-/// - [isGuardOnly] (Zone C): dotted border, lock icon, non-tappable
-///
-/// Pulses briefly on status change via [didUpdateWidget].
 class SpotTile extends StatefulWidget {
   final Spot spot;
   final VoidCallback? onTap;
@@ -45,8 +39,8 @@ class _SpotTileState extends State<SpotTile>
       duration: const Duration(milliseconds: 500),
     );
     _scaleAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.15), weight: 40),
-      TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0),  weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.12), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.12, end: 1.0),  weight: 60),
     ]).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
   }
 
@@ -87,35 +81,18 @@ class _SpotTileState extends State<SpotTile>
   @override
   Widget build(BuildContext context) {
     final color = widget.spot.statusColor;
-
-    Widget tile;
+    Widget tile = _buildCard(color);
 
     if (widget.isMuted) {
-      // ── Dashed border, reduced fill, 45% opacity ──────────────────────────
       tile = Opacity(
-        opacity: 0.45,
+        opacity: 0.5,
         child: Stack(
           children: [
-            Container(
-              width:  AppSpacing.spotWidth,
-              height: AppSpacing.spotHeight,
-              decoration: BoxDecoration(
-                color:        color.withAlpha(25),
-                borderRadius: BorderRadius.circular(AppSpacing.spotRadius),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                widget.spot.spotLabel,
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 11, fontWeight: FontWeight.w600,
-                  color: color, letterSpacing: 0.5,
-                ),
-              ),
-            ),
+            tile,
             Positioned.fill(
               child: CustomPaint(
                 painter: _DashedBorderPainter(
-                  color: color.withAlpha(128),
+                  color: color.withAlpha(140),
                   borderRadius: AppSpacing.spotRadius,
                 ),
               ),
@@ -124,62 +101,26 @@ class _SpotTileState extends State<SpotTile>
         ),
       );
     } else if (widget.isGuardOnly) {
-      // ── Dotted border, lock icon ──────────────────────────────────────────
       tile = Stack(
         children: [
-          Container(
-            width:  AppSpacing.spotWidth,
-            height: AppSpacing.spotHeight,
-            decoration: BoxDecoration(
-              color:        color.withAlpha(30),
-              borderRadius: BorderRadius.circular(AppSpacing.spotRadius),
-            ),
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(LucideIcons.lock, size: 10, color: color),
-                const SizedBox(height: 2),
-                Text(
-                  widget.spot.spotLabel,
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 11, fontWeight: FontWeight.w600,
-                    color: color, letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          tile,
           Positioned.fill(
             child: CustomPaint(
               painter: _DashedBorderPainter(
-                color: color.withAlpha(180),
+                color: color.withAlpha(160),
                 borderRadius: AppSpacing.spotRadius,
                 dashLength: 2,
                 gapLength: 2,
               ),
             ),
           ),
-        ],
-      );
-    } else {
-      // ── Normal solid border ────────────────────────────────────────────────
-      tile = Container(
-        width:  AppSpacing.spotWidth,
-        height: AppSpacing.spotHeight,
-        decoration: BoxDecoration(
-          color:        color.withAlpha(30),
-          borderRadius: BorderRadius.circular(AppSpacing.spotRadius),
-          border:       Border.all(color: color.withAlpha(180), width: 1.5),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          widget.spot.spotLabel,
-          style: GoogleFonts.jetBrainsMono(
-            fontSize: 11, fontWeight: FontWeight.w600,
-            color: color, letterSpacing: 0.5,
+          // Lock icon overlay — bottom-right corner
+          Positioned(
+            right: 5,
+            top: 5,
+            child: Icon(LucideIcons.lock, size: 10, color: color.withAlpha(200)),
           ),
-        ),
+        ],
       );
     }
 
@@ -195,11 +136,65 @@ class _SpotTileState extends State<SpotTile>
       ),
     );
   }
+
+  Widget _buildCard(Color color) {
+    return Container(
+      width:  AppSpacing.spotWidth,
+      height: AppSpacing.spotHeight,
+      decoration: BoxDecoration(
+        color: color.withAlpha(28),
+        borderRadius: BorderRadius.circular(AppSpacing.spotRadius),
+        border: Border.all(color: color.withAlpha(200), width: 1.5),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildStatusIndicator(color),
+          const SizedBox(height: 8),
+          Text(
+            widget.spot.spotLabel,
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// AVAILABLE → colored dot only
+  /// OCCUPIED  → car icon only
+  /// RESERVED  → clock icon only
+  /// otherwise → faded dot
+  Widget _buildStatusIndicator(Color color) {
+    switch (widget.spot.status) {
+      case 'AVAILABLE':
+        return Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        );
+      case 'OCCUPIED':
+        return Icon(LucideIcons.car, color: color, size: 22);
+      case 'RESERVED':
+        return Icon(LucideIcons.clock, color: color, size: 22);
+      default:
+        return Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color.withAlpha(120),
+            shape: BoxShape.circle,
+          ),
+        );
+    }
+  }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Dashed / dotted border painter
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Dashed / dotted border painter ────────────────────────────────────────────
 
 class _DashedBorderPainter extends CustomPainter {
   final Color  color;
@@ -217,9 +212,9 @@ class _DashedBorderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color      = color
+      ..color       = color
       ..strokeWidth = 1.5
-      ..style      = PaintingStyle.stroke;
+      ..style       = PaintingStyle.stroke;
 
     final path = Path()
       ..addRRect(RRect.fromRectAndRadius(

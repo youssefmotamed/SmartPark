@@ -17,6 +17,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/student/active_reservation_screen.dart';
 import 'screens/student/reservation_cancelled_screen.dart';
+import 'screens/student/exit_success_screen.dart';
 import 'screens/student/points_balance_screen.dart';
 import 'screens/student/points_history_screen.dart';
 import 'screens/student/rewards_screen.dart';
@@ -115,6 +116,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/student/reservation/cancelled',
       builder: (_, _) => const ReservationCancelledScreen(),
+    ),
+    GoRoute(
+      path: '/student/exit-success',
+      builder: (_, _) => const ExitSuccessScreen(),
     ),
     GoRoute(
       path: '/student/notifications',

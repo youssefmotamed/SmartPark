@@ -1,23 +1,15 @@
-// points_balance_screen.dart — S10: Points balance overview for SmartPark students
+// points_balance_screen.dart — S10: Points balance overview
+// Split layout: dark navy hero (star + balance + multiplier), light card area below.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../config/colors.dart';
-import '../../config/app_typography.dart';
-import '../../config/app_spacing.dart';
 import '../../models/points_summary.dart';
 import '../../providers/badge_provider.dart';
 import '../../providers/points_provider.dart';
 
-/// S10 — Points Balance screen.
-///
-/// Read-only overview of the student's current points status showing:
-/// - Hero: large points number + badge multiplier pill
-/// - Summary row: total earned / spent / expiring soon
-/// - Actions: View History and Rewards Store
-///
-/// Loads [PointsProvider.loadBalanceAndSummary] on open.
 class PointsBalanceScreen extends StatefulWidget {
   final bool showAppBar;
   const PointsBalanceScreen({super.key, this.showAppBar = true});
@@ -31,12 +23,23 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
 
   late final AnimationController _animController;
 
+  // ── Light card palette ─────────────────────────────────────────────────────
+  static const _kPageBg     = Color(0xFFEEF1F7);
+  static const _kCardBg     = Colors.white;
+  static const _kCardText   = Color(0xFF1A2035);
+  static const _kCardSub    = Color(0xFF6B7280);
+  static const _kAmber      = Color(0xFFEDB82A);
+  static const _kGreen      = Color(0xFF2E7D32);
+  static const _kGreenLight = Color(0xFF4CAF50);
+  static const _kRed        = Color(0xFFD32F2F);
+  static const _kOrange     = Color(0xFFE65100);
+
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
-      vsync:    this,
-      duration: const Duration(milliseconds: 600),
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final badgeProvider = context.read<BadgeProvider>();
@@ -58,106 +61,10 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
     super.dispose();
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-  Color _tierColor(String badgeType) {
-    switch (badgeType) {
-      case 'CARPOOL_2': return AppColors.carpool2;
-      case 'CARPOOL_3': return AppColors.carpool3;
-      case 'CARPOOL_4': return AppColors.carpool4;
-      case 'CARPOOL_5': return AppColors.carpool5;
-      default:          return AppColors.individual;
-    }
-  }
-
-  String _tierLabel(String badgeType) =>
-      badgeType.replaceAll('_', ' ');
-
-  String _multiplierLabel(double m) =>
-      '${m.toStringAsFixed(1)}×';
-
-  // ── Build ─────────────────────────────────────────────────────────────────────
-
-  @override
-  Widget build(BuildContext context) {
-    final badgeProvider  = context.watch<BadgeProvider>();
-    final pointsProvider = context.watch<PointsProvider>();
-    final defaultBadge   = badgeProvider.defaultBadge;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: widget.showAppBar
-          ? AppBar(
-              backgroundColor: AppColors.surface,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(LucideIcons.arrowLeft,
-                    color: AppColors.textSecondary),
-                onPressed: () => context.pop(),
-              ),
-              title: Text('Points', style: AppTypography.displaySmall),
-              centerTitle: true,
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(1),
-                child: Container(height: 1, color: AppColors.divider),
-              ),
-            )
-          : null,
-      body: () {
-        if (badgeProvider.isLoadingBadges && badgeProvider.badges.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
-        }
-        if (pointsProvider.error != null && defaultBadge == null) {
-          return _buildError(pointsProvider);
-        }
-        final displayBalance = defaultBadge?.pointsBalance ?? 0;
-        final displayType    = defaultBadge?.badgeType ?? 'INDIVIDUAL';
-        final displayMult    = _multiplierFromType(displayType);
-        return _buildContent(
-          displayBalance,
-          displayType,
-          displayMult,
-          pointsProvider.summary,
-          pointsProvider.isLoadingSummary,
-        );
-      }(),
-    );
-  }
-
-  // ── Error state ───────────────────────────────────────────────────────────────
-
-  Widget _buildError(PointsProvider provider) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(LucideIcons.alertCircle,
-              size: 48, color: AppColors.error),
-          const SizedBox(height: 16),
-          Text(
-            provider.error!,
-            style: AppTypography.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () => context.read<PointsProvider>().loadBalanceAndSummary(),
-            child: Text(
-              'Retry',
-              style: AppTypography.labelMedium.copyWith(color: AppColors.primary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Loaded content ────────────────────────────────────────────────────────────
-
-  double _multiplierFromType(String badgeType) {
-    switch (badgeType) {
+  double _multiplierFromType(String t) {
+    switch (t) {
       case 'CARPOOL_2': return 1.2;
       case 'CARPOOL_3': return 1.4;
       case 'CARPOOL_4': return 1.6;
@@ -166,234 +73,375 @@ class _PointsBalanceScreenState extends State<PointsBalanceScreen>
     }
   }
 
-  Widget _buildContent(
-    int displayBalance,
-    String displayType,
-    double displayMult,
-    PointsSummary? summary,
-    bool isLoadingSummary,
-  ) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.screenH,
-        vertical:   AppSpacing.screenV,
-      ),
-      child: FadeTransition(
-        opacity: _animController,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 24),
-            _buildHero(displayBalance, displayType, displayMult),
-            const SizedBox(height: 32),
-            _buildSummaryRow(summary, isLoadingSummary),
-            const SizedBox(height: 32),
-            _buildActions(),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Hero section ──────────────────────────────────────────────────────────────
-
-  Widget _buildHero(int pointsBalance, String badgeType, double multiplier) {
-    final tierColor = _tierColor(badgeType);
-
-    return Column(
-      children: [
-        // Radial glow behind points number
-        Container(
-          width:  180,
-          height: 180,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [
-                AppColors.primary.withValues(alpha: 0.12),
-                AppColors.background.withValues(alpha: 0.0),
-              ],
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TweenAnimationBuilder<int>(
-                tween: IntTween(begin: 0, end: pointsBalance),
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeOutCubic,
-                builder: (_, value, _) => Text(
-                  '$value',
-                  style: AppTypography.displayLarge.copyWith(
-                    fontSize:      56,
-                    color:         AppColors.primary,
-                    letterSpacing: -1,
-                  ),
-                ),
-              ),
-              Text(
-                'points',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Badge multiplier pill
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color:        tierColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: tierColor.withValues(alpha: 0.3)),
-          ),
-          child: Text(
-            '${_tierLabel(badgeType)} · ${_multiplierLabel(multiplier)} multiplier',
-            style: AppTypography.labelSmall.copyWith(color: tierColor),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── Summary row ───────────────────────────────────────────────────────────────
-
-  Widget _buildSummaryRow(PointsSummary? summary, bool isLoading) {
-    if (isLoading || summary == null) {
-      return const SizedBox(
-        height: 80,
-        child: Center(
-          child: CircularProgressIndicator(
-            color: AppColors.primary,
-            strokeWidth: 2,
-          ),
-        ),
-      );
+  String _badgeLabel(String t) {
+    switch (t) {
+      case 'CARPOOL_2': return 'Carpool 2';
+      case 'CARPOOL_3': return 'Carpool 3';
+      case 'CARPOOL_4': return 'Carpool 4';
+      case 'CARPOOL_5': return 'Carpool 5';
+      default:          return 'Individual';
     }
-    return Row(
-      children: [
-        Expanded(child: _SummaryCard(
-          value: summary.totalEarned,
-          label: 'Earned',
-          color: AppColors.success,
-        )),
-        const SizedBox(width: 8),
-        Expanded(child: _SummaryCard(
-          value: summary.totalSpent,
-          label: 'Spent',
-          color: AppColors.error,
-        )),
-        const SizedBox(width: 8),
-        Expanded(child: _SummaryCard(
-          value: summary.expiringSoon,
-          label: 'Expiring',
-          color: AppColors.warning,
-        )),
-      ],
-    );
   }
 
-  // ── Action buttons ────────────────────────────────────────────────────────────
-
-  Widget _buildActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // View History
-        SizedBox(
-          height: AppSpacing.buttonHeight,
-          child: OutlinedButton.icon(
-            onPressed: () => context.push('/student/points/history'),
-            icon:  const Icon(LucideIcons.history, size: 18),
-            label: const Text('View History'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary, width: 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
-              ),
-              textStyle: AppTypography.labelLarge.copyWith(
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Rewards Store
-        SizedBox(
-          height: AppSpacing.buttonHeight,
-          child: ElevatedButton.icon(
-            onPressed: () => context.push('/student/rewards'),
-            icon:  const Icon(LucideIcons.gift, size: 18),
-            label: const Text('Rewards Store'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.background,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
-              ),
-              textStyle: AppTypography.labelLarge.copyWith(
-                color: AppColors.background,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Summary card
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SummaryCard extends StatelessWidget {
-  final int    value;
-  final String label;
-  final Color  color;
-
-  const _SummaryCard({
-    required this.value,
-    required this.label,
-    required this.color,
-  });
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color:        AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // Colored top accent line
-          Container(height: 3, color: color),
+    final badgeProvider  = context.watch<BadgeProvider>();
+    final pointsProvider = context.watch<PointsProvider>();
+    final defaultBadge   = badgeProvider.defaultBadge;
 
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Text(
-                  '$value',
-                  style: AppTypography.displaySmall.copyWith(color: color),
+    if (badgeProvider.isLoadingBadges && badgeProvider.badges.isEmpty) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: CircularProgressIndicator(color: _kAmber)),
+      );
+    }
+
+    final balance    = defaultBadge?.pointsBalance ?? 0;
+    final badgeType  = defaultBadge?.badgeType ?? 'INDIVIDUAL';
+    final multiplier = _multiplierFromType(badgeType);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: widget.showAppBar
+          ? AppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                onPressed: () => context.pop(),
+              ),
+              title: Text(
+                'Points',
+                style: GoogleFonts.manrope(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
                 ),
-                const SizedBox(height: 4),
-                Text(label, style: AppTypography.bodySmall),
+              ),
+              centerTitle: true,
+            )
+          : null,
+      body: Column(
+        children: [
+          // ── Dark hero area ───────────────────────────────────────────────
+          Expanded(
+            flex: 42,
+            child: _buildHero(balance, multiplier, badgeType),
+          ),
+
+          // ── Light card area ──────────────────────────────────────────────
+          Expanded(
+            flex: 58,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: _kPageBg,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: FadeTransition(
+                opacity: _animController,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildSummaryCard(pointsProvider.summary, pointsProvider.isLoadingSummary),
+                      const SizedBox(height: 16),
+                      _buildRewardsButton(),
+                      const SizedBox(height: 12),
+                      _buildHistoryButton(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Hero section ───────────────────────────────────────────────────────────
+
+  Widget _buildHero(int balance, double multiplier, String badgeType) {
+    return FadeTransition(
+      opacity: _animController,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Star icon
+          const Icon(Icons.star_rounded, color: _kAmber, size: 44),
+          const SizedBox(height: 12),
+
+          // Animated balance counter
+          TweenAnimationBuilder<int>(
+            tween: IntTween(begin: 0, end: balance),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (_, value, _) => Text(
+              '$value',
+              style: GoogleFonts.manrope(
+                fontSize: 64,
+                fontWeight: FontWeight.w800,
+                color: _kAmber,
+                height: 1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          Text(
+            'points available',
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              color: Colors.white.withAlpha(160),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Multiplier pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(18),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withAlpha(40)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(LucideIcons.shield, size: 14, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(
+                  '${multiplier.toStringAsFixed(1)}× multiplier · ${_badgeLabel(badgeType)}',
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Summary card ───────────────────────────────────────────────────────────
+
+  Widget _buildSummaryCard(PointsSummary? summary, bool isLoading) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _kCardBg,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(12),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // ── Total Earned ─────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: Row(
+              children: [
+                // Green icon
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: _kGreenLight.withAlpha(35),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.trending_up_rounded,
+                    color: _kGreenLight,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total Earned',
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: _kCardSub,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    isLoading || summary == null
+                        ? const SizedBox(
+                            width: 80,
+                            height: 24,
+                            child: LinearProgressIndicator(
+                              color: _kGreen,
+                              backgroundColor: Color(0xFFE8F5E9),
+                            ),
+                          )
+                        : RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '+${summary.totalEarned}',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                    color: _kGreen,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '  pts',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: _kCardSub,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // ── Divider ───────────────────────────────────────────────────────
+          const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+
+          // ── Spent | Expiring ──────────────────────────────────────────────
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildSubStat(
+                    icon: Icons.trending_down_rounded,
+                    iconColor: _kRed,
+                    label: 'Spent',
+                    value: isLoading || summary == null ? '-' : '${summary.totalSpent}',
+                    valueColor: _kRed,
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  color: const Color(0xFFF0F0F0),
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                Expanded(
+                  child: _buildSubStat(
+                    icon: Icons.access_time_rounded,
+                    iconColor: _kOrange,
+                    label: 'Expiring',
+                    value: isLoading || summary == null ? '-' : '${summary.expiringSoon}',
+                    valueColor: _kOrange,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubStat({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+    required Color valueColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: _kCardSub,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: GoogleFonts.manrope(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: valueColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Action buttons ─────────────────────────────────────────────────────────
+
+  Widget _buildRewardsButton() {
+    return SizedBox(
+      height: 54,
+      child: ElevatedButton(
+        onPressed: () => context.push('/student/rewards'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _kAmber,
+          foregroundColor: _kCardText,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: Text(
+          'Rewards Store',
+          style: GoogleFonts.manrope(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _kCardText,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryButton() {
+    return SizedBox(
+      height: 54,
+      child: ElevatedButton(
+        onPressed: () => context.push('/student/points/history'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _kCardBg,
+          foregroundColor: _kCardText,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: Text(
+          'View History',
+          style: GoogleFonts.manrope(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _kCardText,
+          ),
+        ),
       ),
     );
   }

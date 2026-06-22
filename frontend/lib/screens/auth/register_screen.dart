@@ -1,19 +1,13 @@
-// register_screen.dart — S03: Registration screen for new SmartPark students
-// Flat scrollable layout with staggered slide-up animations.
-// Cohesive with login screen: same dark palette, Bebas Neue × Manrope, Lucide icons.
+// register_screen.dart — S03: Registration screen
+// Split layout: dark navy header with back button + title, white card slides up from below.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
-import '../../config/app_typography.dart';
 import '../../config/colors.dart';
 import '../../providers/auth_provider.dart';
 
-/// S03 — Registration screen for new student accounts.
-///
-/// Phase 0: catches [UnimplementedError] from [AuthProvider.register],
-/// shows a success snackbar, and redirects to `/login` so the flow is testable.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -22,29 +16,28 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen>
-    with SingleTickerProviderStateMixin {
-  // ── Form ───────────────────────────────────────────────────────────────────
+    with TickerProviderStateMixin {
+  // ── Form state ─────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
-  final _studentIdController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmController = TextEditingController();
-  final _plateController = TextEditingController();
+  final _fullNameController    = TextEditingController();
+  final _studentIdController   = TextEditingController();
+  final _emailController       = TextEditingController();
+  final _passwordController    = TextEditingController();
+  final _confirmController     = TextEditingController();
+  final _plateController       = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _obscureConfirm = true;
-  bool _buttonPressed = false;
+  bool _obscureConfirm  = true;
+  bool _buttonPressed   = false;
 
-  // ── Entry animations ───────────────────────────────────────────────────────
-  // Single controller, 800 ms total, drives 8 staggered pairs (fade + slide).
-  // Interval math: delay 0–420 ms in 60 ms steps, each item 350 ms long.
-  // start = delayMs / 800 ; end = (delayMs + 350) / 800
-
+  // ── Animation controllers ──────────────────────────────────────────────────
+  late final AnimationController _bgController;
   late final AnimationController _entryController;
 
   late final Animation<double> _headerFade;
-  late final Animation<Offset> _headerSlide;
+  late final Animation<Offset> _cardSlide;
+
+  // Form field stagger
   late final Animation<double> _nameFade;
   late final Animation<Offset> _nameSlide;
   late final Animation<double> _idFade;
@@ -60,68 +53,81 @@ class _RegisterScreenState extends State<RegisterScreen>
   late final Animation<double> _buttonFade;
   late final Animation<Offset> _buttonSlide;
 
+  // ── Light-card color palette ───────────────────────────────────────────────
+  static const _kCardText    = Color(0xFF1A2035);
+  static const _kCardTextSub = Color(0xFF6B7280);
+  static const _kButtonColor = Color(0xFFEDB82A);
+
   @override
   void initState() {
     super.initState();
 
+    // Card entrance
+    _bgController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 620),
+    );
+    _headerFade = CurvedAnimation(
+      parent: _bgController,
+      curve: const Interval(0.0, 0.55, curve: Curves.easeIn),
+    );
+    _cardSlide = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _bgController,
+      curve: const Interval(0.0, 0.88, curve: Curves.easeOutQuart),
+    ));
+
+    // Form stagger — 900 ms, 7 fields × 60 ms steps, each item 350 ms
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
     );
 
-    // Shared start offset — 50 % of each widget's height ≈ 24–28 px on 52 px fields.
-    const slideStart = Offset(0, 0.5);
+    const slideStart = Offset(0, 0.4);
     const c = Curves.easeOutCubic;
 
-    // Header — delay 0 ms → [0.000, 0.438]
-    _headerFade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.000, 0.438, curve: c)));
-    _headerSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.000, 0.438, curve: c)));
-
-    // Full Name — delay 60 ms → [0.075, 0.513]
     _nameFade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.075, 0.513, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.000, 0.389, curve: c)));
     _nameSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.075, 0.513, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.000, 0.389, curve: c)));
 
-    // Student ID — delay 120 ms → [0.150, 0.588]
     _idFade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.150, 0.588, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.067, 0.456, curve: c)));
     _idSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.150, 0.588, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.067, 0.456, curve: c)));
 
-    // Email — delay 180 ms → [0.225, 0.663]
     _emailFade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.225, 0.663, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.133, 0.522, curve: c)));
     _emailSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.225, 0.663, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.133, 0.522, curve: c)));
 
-    // Password — delay 240 ms → [0.300, 0.738]
     _passwordFade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.300, 0.738, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.200, 0.589, curve: c)));
     _passwordSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.300, 0.738, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.200, 0.589, curve: c)));
 
-    // Confirm Password — delay 300 ms → [0.375, 0.813]
     _confirmFade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.375, 0.813, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.267, 0.656, curve: c)));
     _confirmSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.375, 0.813, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.267, 0.656, curve: c)));
 
-    // License Plate — delay 360 ms → [0.450, 0.888]
     _plateFade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.450, 0.888, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.333, 0.722, curve: c)));
     _plateSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.450, 0.888, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.333, 0.722, curve: c)));
 
-    // Button + link — delay 420 ms → [0.525, 0.963]
     _buttonFade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.525, 0.963, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.400, 0.800, curve: c)));
     _buttonSlide = Tween<Offset>(begin: slideStart, end: Offset.zero).animate(
-        CurvedAnimation(parent: _entryController, curve: const Interval(0.525, 0.963, curve: c)));
+        CurvedAnimation(parent: _entryController, curve: const Interval(0.400, 0.800, curve: c)));
 
-    _entryController.forward();
+    _bgController.forward();
+    Future.delayed(
+      const Duration(milliseconds: 360),
+      () { if (mounted) _entryController.forward(); },
+    );
   }
 
   @override
@@ -132,6 +138,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     _passwordController.dispose();
     _confirmController.dispose();
     _plateController.dispose();
+    _bgController.dispose();
     _entryController.dispose();
     super.dispose();
   }
@@ -154,18 +161,13 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Account created! Please log in.',
-            style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
-          ),
-          backgroundColor: AppColors.surfaceLight,
+        const SnackBar(
+          content: Text('Account created! Please sign in.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
       context.go('/login');
     }
-    // If not success: error is shown via context.watch<AuthProvider>().error
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -179,58 +181,73 @@ class _RegisterScreenState extends State<RegisterScreen>
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // Subtle radial gradient at top — primary at 4 % opacity.
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topCenter,
-                  radius: 1.1,
-                  colors: [
-                    AppColors.primary.withAlpha(10), // ≈ 4 %
-                    Colors.transparent,
-                  ],
+          Positioned.fill(child: CustomPaint(painter: _DiagonalStripePainter())),
+          Column(
+            children: [
+              // ── Dark header with back button + title ───────────────────────
+              SafeArea(
+                bottom: false,
+                child: FadeTransition(
+                  opacity: _headerFade,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+                    child: _buildHeader(),
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          // Main scrollable content.
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Form(
-                key: _formKey,
-                autovalidateMode: AutovalidateMode.disabled,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 12),
-                    _buildBackButton(),
-                    const SizedBox(height: 20),
-                    _buildHeader(),
-                    const SizedBox(height: 32),
-                    _buildFullNameField(auth),
-                    const SizedBox(height: 16),
-                    _buildStudentIdField(auth),
-                    const SizedBox(height: 16),
-                    _buildEmailField(auth),
-                    const SizedBox(height: 16),
-                    _buildPasswordField(auth),
-                    const SizedBox(height: 16),
-                    _buildConfirmPasswordField(auth),
-                    const SizedBox(height: 16),
-                    _buildPlateField(auth),
-                    const SizedBox(height: 24),
-                    _buildErrorCard(auth),
-                    _buildRegisterButton(auth),
-                    const SizedBox(height: 24),
-                    _buildLoginLink(),
-                    const SizedBox(height: 36),
-                  ],
+              // ── White card slides up ───────────────────────────────────────
+              Expanded(
+                child: ClipRect(
+                  child: SlideTransition(
+                    position: _cardSlide,
+                    child: Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(28)),
+                      ),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+                        child: Form(
+                          key: _formKey,
+                          autovalidateMode: AutovalidateMode.disabled,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildFieldRow(_nameFade, _nameSlide,
+                                  _buildFullNameField(auth)),
+                              const SizedBox(height: 16),
+                              _buildFieldRow(_idFade, _idSlide,
+                                  _buildStudentIdField(auth)),
+                              const SizedBox(height: 16),
+                              _buildFieldRow(_emailFade, _emailSlide,
+                                  _buildEmailField(auth)),
+                              const SizedBox(height: 16),
+                              _buildFieldRow(_passwordFade, _passwordSlide,
+                                  _buildPasswordField(auth)),
+                              const SizedBox(height: 16),
+                              _buildFieldRow(_confirmFade, _confirmSlide,
+                                  _buildConfirmField(auth)),
+                              const SizedBox(height: 16),
+                              _buildFieldRow(_plateFade, _plateSlide,
+                                  _buildPlateField(auth)),
+                              const SizedBox(height: 24),
+                              _buildErrorCard(auth),
+                              _buildRegisterButton(auth),
+                              const SizedBox(height: 20),
+                              _buildLoginLink(),
+                              const SizedBox(height: 32),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -239,236 +256,215 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   // ── Section builders ───────────────────────────────────────────────────────
 
-  /// Back arrow — returns to login screen.
-  Widget _buildBackButton() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: GestureDetector(
-        onTap: () => context.go('/login'),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceLight,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.divider),
-          ),
-          child: const Icon(
-            LucideIcons.arrowLeft,
-            color: AppColors.textSecondary,
-            size: 20,
+  Widget _buildHeader() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        GestureDetector(
+          onTap: () => context.go('/login'),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(18),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withAlpha(40)),
+            ),
+            child: const Icon(Icons.arrow_back_rounded,
+                color: Colors.white, size: 20),
           ),
         ),
-      ),
-    );
-  }
-
-  /// Screen title and subtitle with primary left-border accent.
-  Widget _buildHeader() {
-    return FadeTransition(
-      opacity: _headerFade,
-      child: SlideTransition(
-        position: _headerSlide,
-        child: Row(
+        const SizedBox(width: 14),
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Electric-blue vertical rule — automotive dashboard accent.
-            Container(
-              width: 3,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(2),
+            Text(
+              'Create Account',
+              style: GoogleFonts.manrope(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                height: 1.2,
               ),
             ),
-            const SizedBox(width: 14),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Create Account', style: AppTypography.displayMedium),
-                const SizedBox(height: 4),
-                Text('Join Smart Park', style: AppTypography.bodyMedium),
-              ],
+            Text(
+              'Register as a university student',
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: Colors.white.withAlpha(160),
+                fontWeight: FontWeight.w400,
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
-  /// Full name input.
+  Widget _buildFieldRow(
+    Animation<double> fade,
+    Animation<Offset> slide,
+    Widget child,
+  ) {
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(position: slide, child: child),
+    );
+  }
+
   Widget _buildFullNameField(AuthProvider auth) {
-    return FadeTransition(
-      opacity: _nameFade,
-      child: SlideTransition(
-        position: _nameSlide,
-        child: _RegInputField(
-          controller: _fullNameController,
-          enabled: !auth.isLoading,
-          hint: 'Full name',
-          prefixIcon: LucideIcons.user,
-          textInputAction: TextInputAction.next,
-          keyboardType: TextInputType.name,
-          textCapitalization: TextCapitalization.words,
-          validator: (v) {
-            if (v == null || v.trim().isEmpty) return 'Full name is required';
-            if (v.trim().length < 3) return 'Name must be at least 3 characters';
-            return null;
-          },
-        ),
-      ),
+    return _LightRegField(
+      controller: _fullNameController,
+      enabled: !auth.isLoading,
+      hint: 'Walid Ahmed',
+      label: 'Full Name',
+      prefixIcon: LucideIcons.user,
+      textInputAction: TextInputAction.next,
+      keyboardType: TextInputType.name,
+      textCapitalization: TextCapitalization.words,
+      validator: (v) {
+        if (v == null || v.trim().isEmpty) return 'Full name is required';
+        if (v.trim().length < 3) return 'Name must be at least 3 characters';
+        return null;
+      },
     );
   }
 
-  /// Student ID input with helper text.
   Widget _buildStudentIdField(AuthProvider auth) {
-    return FadeTransition(
-      opacity: _idFade,
-      child: SlideTransition(
-        position: _idSlide,
-        child: _RegInputField(
-          controller: _studentIdController,
-          enabled: !auth.isLoading,
-          hint: 'Student ID',
-          prefixIcon: LucideIcons.hash,
-          keyboardType: TextInputType.number,
-          textInputAction: TextInputAction.next,
-          helperText: 'Your university student ID (e.g., 20221234)',
-          validator: (v) {
-            if (v == null || v.trim().isEmpty) return 'Student ID is required';
-            if (!RegExp(r'^\d+$').hasMatch(v.trim())) {
-              return 'Student ID must contain digits only';
-            }
-            if (v.trim().length < 5) return 'Student ID must be at least 5 digits';
-            if (v.trim().length > 20) return 'Student ID must be at most 20 digits';
-            return null;
-          },
-        ),
-      ),
+    return _LightRegField(
+      controller: _studentIdController,
+      enabled: !auth.isLoading,
+      hint: '20221234',
+      label: 'Student ID',
+      prefixIcon: LucideIcons.creditCard,
+      keyboardType: TextInputType.number,
+      textInputAction: TextInputAction.next,
+      validator: (v) {
+        if (v == null || v.trim().isEmpty) return 'Student ID is required';
+        if (!RegExp(r'^\d+$').hasMatch(v.trim())) {
+          return 'Student ID must contain digits only';
+        }
+        if (v.trim().length < 5) return 'Must be at least 5 digits';
+        return null;
+      },
     );
   }
 
-  /// Email input.
   Widget _buildEmailField(AuthProvider auth) {
-    return FadeTransition(
-      opacity: _emailFade,
-      child: SlideTransition(
-        position: _emailSlide,
-        child: _RegInputField(
-          controller: _emailController,
-          enabled: !auth.isLoading,
-          hint: 'Email address',
-          prefixIcon: LucideIcons.mail,
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          validator: (v) {
-            if (v == null || v.trim().isEmpty) return 'Email is required';
-            if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
-              return 'Enter a valid email address';
-            }
-            return null;
-          },
-        ),
-      ),
+    return _LightRegField(
+      controller: _emailController,
+      enabled: !auth.isLoading,
+      hint: 'walid@student.edu',
+      label: 'Email Address',
+      prefixIcon: LucideIcons.mail,
+      keyboardType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.next,
+      validator: (v) {
+        if (v == null || v.trim().isEmpty) return 'Email is required';
+        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
+          return 'Enter a valid email address';
+        }
+        return null;
+      },
     );
   }
 
-  /// Password input with visibility toggle.
   Widget _buildPasswordField(AuthProvider auth) {
-    return FadeTransition(
-      opacity: _passwordFade,
-      child: SlideTransition(
-        position: _passwordSlide,
-        child: _RegInputField(
-          controller: _passwordController,
-          enabled: !auth.isLoading,
-          hint: 'Password',
-          prefixIcon: LucideIcons.lock,
-          obscureText: _obscurePassword,
-          textInputAction: TextInputAction.next,
-          suffixIcon: IconButton(
-            icon: Icon(
-              _obscurePassword ? LucideIcons.eye : LucideIcons.eyeOff,
-              color: AppColors.textTertiary,
-              size: 20,
-            ),
-            onPressed: () =>
-                setState(() => _obscurePassword = !_obscurePassword),
-          ),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Password is required';
-            if (v.length < 8) return 'Password must be at least 8 characters';
-            if (!RegExp(r'\d').hasMatch(v)) {
-              return 'Password must contain at least one number';
-            }
-            return null;
-          },
+    return _LightRegField(
+      controller: _passwordController,
+      enabled: !auth.isLoading,
+      hint: 'Min. 8 characters',
+      label: 'Password',
+      prefixIcon: LucideIcons.lock,
+      obscureText: _obscurePassword,
+      textInputAction: TextInputAction.next,
+      suffixIcon: IconButton(
+        icon: Icon(
+          _obscurePassword ? LucideIcons.eye : LucideIcons.eyeOff,
+          color: const Color(0xFF9CA3AF),
+          size: 20,
         ),
+        onPressed: () =>
+            setState(() => _obscurePassword = !_obscurePassword),
       ),
+      validator: (v) {
+        if (v == null || v.isEmpty) return 'Password is required';
+        if (v.length < 8) return 'Password must be at least 8 characters';
+        if (!RegExp(r'\d').hasMatch(v)) {
+          return 'Password must contain at least one number';
+        }
+        return null;
+      },
     );
   }
 
-  /// Confirm password input — must match [_passwordController].
-  Widget _buildConfirmPasswordField(AuthProvider auth) {
-    return FadeTransition(
-      opacity: _confirmFade,
-      child: SlideTransition(
-        position: _confirmSlide,
-        child: _RegInputField(
-          controller: _confirmController,
-          enabled: !auth.isLoading,
-          hint: 'Confirm password',
-          prefixIcon: LucideIcons.lock,
-          obscureText: _obscureConfirm,
-          textInputAction: TextInputAction.next,
-          suffixIcon: IconButton(
-            icon: Icon(
-              _obscureConfirm ? LucideIcons.eye : LucideIcons.eyeOff,
-              color: AppColors.textTertiary,
-              size: 20,
-            ),
-            onPressed: () =>
-                setState(() => _obscureConfirm = !_obscureConfirm),
-          ),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Please confirm your password';
-            if (v != _passwordController.text) return 'Passwords do not match';
-            return null;
-          },
+  Widget _buildConfirmField(AuthProvider auth) {
+    return _LightRegField(
+      controller: _confirmController,
+      enabled: !auth.isLoading,
+      hint: 'Repeat password',
+      label: 'Confirm Password',
+      prefixIcon: LucideIcons.lock,
+      obscureText: _obscureConfirm,
+      textInputAction: TextInputAction.next,
+      suffixIcon: IconButton(
+        icon: Icon(
+          _obscureConfirm ? LucideIcons.eye : LucideIcons.eyeOff,
+          color: const Color(0xFF9CA3AF),
+          size: 20,
         ),
+        onPressed: () =>
+            setState(() => _obscureConfirm = !_obscureConfirm),
       ),
+      validator: (v) {
+        if (v == null || v.isEmpty) return 'Please confirm your password';
+        if (v != _passwordController.text) return 'Passwords do not match';
+        return null;
+      },
     );
   }
 
-  /// License plate input — mono font, auto-uppercase.
   Widget _buildPlateField(AuthProvider auth) {
-    return FadeTransition(
-      opacity: _plateFade,
-      child: SlideTransition(
-        position: _plateSlide,
-        child: _RegInputField(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _LightRegField(
           controller: _plateController,
           enabled: !auth.isLoading,
-          hint: 'License plate (e.g., ABC 123)',
+          hint: 'ABC 1234',
+          label: 'License Plate Number',
           prefixIcon: LucideIcons.car,
           keyboardType: TextInputType.text,
           textInputAction: TextInputAction.done,
           textCapitalization: TextCapitalization.characters,
-          inputStyle: AppTypography.mono,
+          useMonoFont: true,
           onFieldSubmitted: (_) => _handleRegister(),
           validator: (v) {
-            if (v == null || v.trim().isEmpty) return 'License plate is required';
+            if (v == null || v.trim().isEmpty) {
+              return 'License plate is required';
+            }
             if (v.trim().length < 3) {
-              return 'Enter a valid license plate number';
+              return 'Enter a valid license plate';
             }
             return null;
           },
         ),
-      ),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Text(
+            'This will be linked to your parking badge',
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: _kCardTextSub,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  /// Error banner — shown when [auth.error] is non-null, slides open.
   Widget _buildErrorCard(AuthProvider auth) {
     return AnimatedSize(
       duration: const Duration(milliseconds: 250),
@@ -479,11 +475,9 @@ class _RegisterScreenState extends State<RegisterScreen>
               padding: const EdgeInsets.only(bottom: 12),
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
+                    horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.error.withAlpha(26), // 10 %
+                  color: AppColors.error.withAlpha(15),
                   borderRadius: BorderRadius.circular(12),
                   border: const Border(
                     left: BorderSide(color: AppColors.error, width: 3),
@@ -491,17 +485,17 @@ class _RegisterScreenState extends State<RegisterScreen>
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      LucideIcons.alertCircle,
-                      color: AppColors.error,
-                      size: 16,
-                    ),
+                    const Icon(Icons.error_outline_rounded,
+                        color: AppColors.error, size: 18),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         auth.error!,
-                        style: AppTypography.bodySmall
-                            .copyWith(color: AppColors.error),
+                        style: GoogleFonts.manrope(
+                          fontSize: 13,
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -511,7 +505,6 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  /// Primary register button — scale-on-press, loading spinner.
   Widget _buildRegisterButton(AuthProvider auth) {
     return FadeTransition(
       opacity: _buttonFade,
@@ -529,9 +522,9 @@ class _RegisterScreenState extends State<RegisterScreen>
               child: ElevatedButton(
                 onPressed: auth.isLoading ? null : _handleRegister,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.background,
-                  disabledBackgroundColor: AppColors.primary.withAlpha(160),
+                  backgroundColor: _kButtonColor,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: _kButtonColor.withAlpha(160),
                   elevation: 0,
                   shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
@@ -543,15 +536,17 @@ class _RegisterScreenState extends State<RegisterScreen>
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.background,
+                          strokeWidth: 2.5,
+                          color: Colors.white,
                         ),
                       )
                     : Text(
-                        'CREATE ACCOUNT',
-                        style: AppTypography.labelLarge.copyWith(
-                          color: AppColors.background,
-                          letterSpacing: 0.8,
+                        'Create Account',
+                        style: GoogleFonts.manrope(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
                         ),
                       ),
               ),
@@ -562,7 +557,6 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  /// "Already have an account? Login →" link.
   Widget _buildLoginLink() {
     return FadeTransition(
       opacity: _buttonFade,
@@ -573,14 +567,19 @@ class _RegisterScreenState extends State<RegisterScreen>
           text: TextSpan(
             children: [
               TextSpan(
-                text: 'Already have an account?  ',
-                style: AppTypography.bodyMedium,
+                text: 'Already have an account? ',
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  color: _kCardTextSub,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
               TextSpan(
-                text: 'Login →',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
+                text: 'Sign In',
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  color: _kCardText,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
@@ -591,116 +590,159 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 }
 
-// ── Private widget ─────────────────────────────────────────────────────────────
+// ── Light-themed input field for the white card ────────────────────────────────
 
-/// Reusable styled input field for the registration form.
-///
-/// Matches the visual spec of [LoginScreen]'s _InputField:
-/// 14 px radius, [AppColors.surfaceLight] fill, 1.5 px [AppColors.divider] border.
-/// Adds [helperText], [textCapitalization], and [inputStyle] for register-specific needs.
-class _RegInputField extends StatelessWidget {
-  const _RegInputField({
+class _LightRegField extends StatelessWidget {
+  const _LightRegField({
     required this.controller,
     required this.hint,
+    required this.label,
     required this.prefixIcon,
     this.enabled = true,
     this.obscureText = false,
+    this.useMonoFont = false,
     this.keyboardType,
     this.textInputAction,
     this.textCapitalization = TextCapitalization.none,
-    this.inputStyle,
     this.onFieldSubmitted,
     this.suffixIcon,
-    this.helperText,
     this.validator,
   });
 
   final TextEditingController controller;
   final String hint;
+  final String label;
   final IconData prefixIcon;
   final bool enabled;
   final bool obscureText;
+  final bool useMonoFont;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final TextCapitalization textCapitalization;
-
-  /// Overrides the default Manrope input style (e.g. pass [AppTypography.mono]
-  /// for the license plate field).
-  final TextStyle? inputStyle;
-
   final ValueChanged<String>? onFieldSubmitted;
   final Widget? suffixIcon;
-
-  /// Optional hint shown below the field when there is no error.
-  final String? helperText;
-
   final FormFieldValidator<String>? validator;
 
-  static const _radius = 14.0;
+  static const _radius    = 14.0;
+  static const _fill      = Color(0xFFF3F4F8);
+  static const _border    = Color(0xFFE5E7EB);
+  static const _textColor = Color(0xFF1A2035);
+  static const _hintColor = Color(0xFF9CA3AF);
+  static const _iconColor = Color(0xFF9CA3AF);
+  static const _labelColor = Color(0xFF374151);
+  static const _accent    = Color(0xFFEDB82A);
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      enabled: enabled,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      textInputAction: textInputAction,
-      textCapitalization: textCapitalization,
-      onFieldSubmitted: onFieldSubmitted,
-      style: inputStyle ??
-          GoogleFonts.manrope(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary,
-          ),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.manrope(
-          fontSize: 15,
-          color: AppColors.textTertiary,
-          fontWeight: FontWeight.w400,
-        ),
-        prefixIcon: Icon(prefixIcon, color: AppColors.textSecondary, size: 20),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: AppColors.surfaceLight,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        constraints: const BoxConstraints(minHeight: 52),
-        helperText: helperText,
-        helperStyle: AppTypography.bodySmall,
-        helperMaxLines: 2,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(
-            color: AppColors.divider,
-            width: 1.5,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _labelColor,
           ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(
-            color: AppColors.divider,
-            width: 1.5,
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          enabled: enabled,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          textCapitalization: textCapitalization,
+          onFieldSubmitted: onFieldSubmitted,
+          style: useMonoFont
+              ? GoogleFonts.jetBrainsMono(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: _textColor,
+                  letterSpacing: 1.5,
+                )
+              : GoogleFonts.manrope(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: _textColor,
+                ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: useMonoFont
+                ? GoogleFonts.jetBrainsMono(
+                    fontSize: 15,
+                    color: _hintColor,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 1.5,
+                  )
+                : GoogleFonts.manrope(
+                    fontSize: 15,
+                    color: _hintColor,
+                    fontWeight: FontWeight.w400,
+                  ),
+            prefixIcon: Icon(prefixIcon, color: _iconColor, size: 20),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: _fill,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            constraints: const BoxConstraints(minHeight: 52),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: const BorderSide(color: _border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: const BorderSide(color: _border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: const BorderSide(color: _accent, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: const BorderSide(color: AppColors.error),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: const BorderSide(color: AppColors.error, width: 2),
+            ),
+            errorStyle: GoogleFonts.manrope(
+              fontSize: 12,
+              color: AppColors.error,
+              fontWeight: FontWeight.w500,
+            ),
           ),
+          validator: validator,
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(color: AppColors.error),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_radius),
-          borderSide: const BorderSide(color: AppColors.error, width: 2),
-        ),
-        errorStyle: AppTypography.bodySmall.copyWith(color: AppColors.error),
-        errorMaxLines: 2,
-      ),
-      validator: validator,
+      ],
     );
   }
+}
+
+// ── Painter ────────────────────────────────────────────────────────────────────
+
+class _DiagonalStripePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withAlpha(10)
+      ..style = PaintingStyle.fill;
+
+    const stripeWidth = 26.0;
+    const gap = 58.0;
+
+    for (double x = -size.height; x < size.width + size.height; x += stripeWidth + gap) {
+      final path = Path()
+        ..moveTo(x, 0)
+        ..lineTo(x + stripeWidth, 0)
+        ..lineTo(x + stripeWidth + size.height, size.height)
+        ..lineTo(x + size.height, size.height)
+        ..close();
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DiagonalStripePainter _) => false;
 }
