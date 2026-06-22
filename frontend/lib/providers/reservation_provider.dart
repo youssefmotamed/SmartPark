@@ -70,7 +70,8 @@ class ReservationProvider extends ChangeNotifier {
     _activeError     = null;
     notifyListeners();
 
-    final wasEntered = _activeReservation?.isEntered ?? false;
+    final wasEntered        = _activeReservation?.isEntered ?? false;
+    final lastReservationId = _activeReservation?.id;
 
     try {
       final result = await _service.getActiveReservation();
@@ -78,7 +79,7 @@ class ReservationProvider extends ChangeNotifier {
         // Reservation vanished while the student was inside → exit was scanned.
         _activeReservation = null;
         _justCompleted     = true;
-        await _fetchLastCompleted();
+        await _fetchLastCompleted(reservationId: lastReservationId);
       } else {
         _activeReservation = result;
         _justCompleted     = false;
@@ -94,10 +95,14 @@ class ReservationProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetches the most recent COMPLETED reservation from history to surface
-  /// points earned after an exit scan.
-  Future<void> _fetchLastCompleted() async {
+  /// Fetches the completed reservation to surface points and timestamps.
+  /// Tries GET /reservations/{id} first (has all fields), falls back to history.
+  Future<void> _fetchLastCompleted({int? reservationId}) async {
     try {
+      if (reservationId != null) {
+        _lastCompletedReservation = await _service.getReservation(reservationId);
+        if (_lastCompletedReservation != null) return;
+      }
       final page = await _service.getHistory(page: 0, status: 'COMPLETED');
       _lastCompletedReservation = page.content.firstOrNull;
     } catch (_) {

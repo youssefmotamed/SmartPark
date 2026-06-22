@@ -59,6 +59,18 @@ class ReservationService extends BaseApiService {
     return ReservationResponse.fromJson(response['data'] as Map<String, dynamic>);
   }
 
+  /// Gets a single reservation by ID.
+  /// Returns null if not found (404).
+  Future<ReservationResponse?> getReservation(int id) async {
+    try {
+      final response = await get('/reservations/$id');
+      return ReservationResponse.fromJson(response['data'] as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
   /// Gets the QR code string for a reservation.
   /// The data field is a plain String, not an object.
   Future<String> getQrCode(int reservationId) async {
