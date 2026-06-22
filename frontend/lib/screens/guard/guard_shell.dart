@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../config/app_spacing.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/notification_bell.dart';
 import 'guard_home_screen.dart';
@@ -87,6 +88,11 @@ class _GuardShellState extends State<GuardShell>
           _TopBar(
             accent: _accent,
             onBellTap: () => context.go('/guard/notifications'),
+            onLogout: () async {
+              final router = GoRouter.of(context);
+              await context.read<AuthProvider>().logout();
+              router.go('/login');
+            },
           ),
           Expanded(
             child: IndexedStack(
@@ -114,10 +120,12 @@ class _GuardShellState extends State<GuardShell>
 class _TopBar extends StatelessWidget {
   final Color accent;
   final VoidCallback onBellTap;
+  final VoidCallback onLogout;
 
   const _TopBar({
     required this.accent,
     required this.onBellTap,
+    required this.onLogout,
   });
 
   static const _kBadgeAmber  = Color(0xFFEDB82A);
@@ -197,6 +205,14 @@ class _TopBar extends StatelessWidget {
           const Spacer(),
           // Notification bell
           NotificationBell(onTap: onBellTap),
+          const SizedBox(width: 4),
+          // Logout
+          IconButton(
+            icon: const Icon(LucideIcons.logOut,
+                size: 20, color: AppColors.textSecondary),
+            onPressed: onLogout,
+            tooltip: 'Logout',
+          ),
         ],
       ),
     );

@@ -73,18 +73,19 @@ class ReservationProvider extends ChangeNotifier {
     final wasEntered = _activeReservation?.isEntered ?? false;
 
     try {
-      _activeReservation = await _service.getActiveReservation();
-      _justCompleted     = false;
-      _startCountdownIfNeeded();
-    } on ApiException catch (e) {
-      if (e.statusCode == 404 && wasEntered) {
+      final result = await _service.getActiveReservation();
+      if (result == null && wasEntered) {
         // Reservation vanished while the student was inside → exit was scanned.
         _activeReservation = null;
         _justCompleted     = true;
         await _fetchLastCompleted();
       } else {
-        _activeError = e.message;
+        _activeReservation = result;
+        _justCompleted     = false;
+        _startCountdownIfNeeded();
       }
+    } on ApiException catch (e) {
+      _activeError = e.message;
     } catch (_) {
       _activeError = 'Failed to load reservation.';
     } finally {
