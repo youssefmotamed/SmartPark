@@ -16,6 +16,10 @@ class ReservationResponse {
   final DateTime? expiresAt;
   final DateTime  expectedLeaveTime;
   final String    badgeType;
+  // Populated on COMPLETED reservations
+  final int?      pointsEarned;
+  final DateTime? entryScannedAt;
+  final DateTime? exitScannedAt;
 
   const ReservationResponse({
     required this.id,
@@ -27,6 +31,9 @@ class ReservationResponse {
     required this.expiresAt,
     required this.expectedLeaveTime,
     required this.badgeType,
+    this.pointsEarned,
+    this.entryScannedAt,
+    this.exitScannedAt,
   });
 
   factory ReservationResponse.fromJson(Map<String, dynamic> json) {
@@ -42,6 +49,13 @@ class ReservationResponse {
                              : null,
       expectedLeaveTime: DateTime.parse(json['expectedLeaveTime'] as String),
       badgeType:         json['badgeType'] as String? ?? 'INDIVIDUAL',
+      pointsEarned:      json['pointsEarned'] as int?,
+      entryScannedAt:    json['entryScannedAt'] != null
+                             ? DateTime.parse(json['entryScannedAt'] as String)
+                             : null,
+      exitScannedAt:     json['exitScannedAt'] != null
+                             ? DateTime.parse(json['exitScannedAt'] as String)
+                             : null,
     );
   }
 
@@ -55,6 +69,9 @@ class ReservationResponse {
         'expiresAt':         expiresAt?.toIso8601String(),
         'expectedLeaveTime': expectedLeaveTime.toIso8601String(),
         'badgeType':         badgeType,
+        'pointsEarned':      pointsEarned,
+        'entryScannedAt':    entryScannedAt?.toIso8601String(),
+        'exitScannedAt':     exitScannedAt?.toIso8601String(),
       };
 
   bool get isActive    => status == 'ACTIVE';

@@ -14,6 +14,10 @@ class ReservationProvider extends ChangeNotifier {
   bool                 _isLoadingActive = false;
   String?              _activeError;
 
+  // ── Exit completion detection ─────────────────────────────────────────────
+  ReservationResponse? _lastCompletedReservation;
+  bool                 _justCompleted = false;
+
   // ── Create / cancel ───────────────────────────────────────────────────────
   bool    _isCreating  = false;
   String? _createError;
@@ -31,18 +35,26 @@ class ReservationProvider extends ChangeNotifier {
   Duration? _timeRemaining;
 
   // ── Getters ───────────────────────────────────────────────────────────────
-  ReservationResponse?      get activeReservation    => _activeReservation;
-  bool                      get isLoadingActive      => _isLoadingActive;
-  String?                   get activeError          => _activeError;
-  bool                      get isCreating           => _isCreating;
-  String?                   get createError          => _createError;
-  List<ReservationResponse> get history              => _history;
-  bool                      get isLoadingHistory     => _isLoadingHistory;
-  String?                   get historyError         => _historyError;
-  bool                      get hasMorePages         => _hasMorePages;
-  String?                   get historyFilter        => _historyFilter;
-  Duration?                 get timeRemaining        => _timeRemaining;
-  bool                      get hasActiveReservation => _activeReservation != null;
+  ReservationResponse?      get activeReservation         => _activeReservation;
+  bool                      get isLoadingActive           => _isLoadingActive;
+  String?                   get activeError               => _activeError;
+  bool                      get isCreating                => _isCreating;
+  String?                   get createError               => _createError;
+  List<ReservationResponse> get history                   => _history;
+  bool                      get isLoadingHistory          => _isLoadingHistory;
+  String?                   get historyError              => _historyError;
+  bool                      get hasMorePages              => _hasMorePages;
+  String?                   get historyFilter             => _historyFilter;
+  Duration?                 get timeRemaining             => _timeRemaining;
+  bool                      get hasActiveReservation      => _activeReservation != null;
+  ReservationResponse?      get lastCompletedReservation  => _lastCompletedReservation;
+  bool                      get justCompleted             => _justCompleted;
+
+  void clearJustCompleted() {
+    _justCompleted              = false;
+    _lastCompletedReservation   = null;
+    notifyListeners();
+  }
 
   void clearCreateError() {
     _createError = null;
@@ -52,20 +64,43 @@ class ReservationProvider extends ChangeNotifier {
   // ── Active reservation ────────────────────────────────────────────────────
 
   /// Fetches the current active reservation. Sets to null on 404.
+  /// Detects ENTERED → null transition to signal a completed exit scan.
   Future<void> fetchActiveReservation() async {
     _isLoadingActive = true;
-    _activeError = null;
+    _activeError     = null;
     notifyListeners();
+
+    final wasEntered = _activeReservation?.isEntered ?? false;
+
     try {
       _activeReservation = await _service.getActiveReservation();
+      _justCompleted     = false;
       _startCountdownIfNeeded();
     } on ApiException catch (e) {
-      _activeError = e.message;
+      if (e.statusCode == 404 && wasEntered) {
+        // Reservation vanished while the student was inside → exit was scanned.
+        _activeReservation = null;
+        _justCompleted     = true;
+        await _fetchLastCompleted();
+      } else {
+        _activeError = e.message;
+      }
     } catch (_) {
       _activeError = 'Failed to load reservation.';
     } finally {
       _isLoadingActive = false;
       notifyListeners();
+    }
+  }
+
+  /// Fetches the most recent COMPLETED reservation from history to surface
+  /// points earned after an exit scan.
+  Future<void> _fetchLastCompleted() async {
+    try {
+      final page = await _service.getHistory(page: 0, status: 'COMPLETED');
+      _lastCompletedReservation = page.content.firstOrNull;
+    } catch (_) {
+      // Silently fail — screen will show 0 pts as fallback
     }
   }
 

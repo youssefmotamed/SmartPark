@@ -152,6 +152,9 @@ class _TopBar extends StatelessWidget {
     required this.initial,
   });
 
+  static const _kBadgeAmber = Color(0xFFEDB82A);
+  static const _kStudentTeal = Color(0xFF26A69A);
+
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
@@ -170,94 +173,73 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // P badge
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: _kBadgeAmber,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                'P',
+                style: GoogleFonts.manrope(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           // Wordmark
-          Expanded(
-            child: Row(
+          RichText(
+            text: TextSpan(
               children: [
-                Text(
-                  'Smart',
-                  style: GoogleFonts.outfit(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
+                TextSpan(
+                  text: 'Smart',
+                  style: GoogleFonts.manrope(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
-                    letterSpacing: -0.3,
+                    height: 1,
                   ),
                 ),
-                Text(
-                  'Park',
-                  style: GoogleFonts.outfit(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: accent,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                // Live dot
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: AppColors.available,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: AppColors.available.withAlpha(120), blurRadius: 4),
-                    ],
+                TextSpan(
+                  text: 'Park',
+                  style: GoogleFonts.manrope(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: _kBadgeAmber,
+                    height: 1,
                   ),
                 ),
               ],
             ),
           ),
-          // Points pill
-          GestureDetector(
-            onTap: onPointsTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withAlpha(28),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.warning.withAlpha(60)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(LucideIcons.star, size: 13, color: AppColors.warning),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$points',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.warning,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+          const SizedBox(width: 8),
+          // STUDENT role chip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: _kStudentTeal,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              'STUDENT',
+              style: GoogleFonts.manrope(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: 0.8,
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          // Bell
+          const Spacer(),
+          // Notification bell
           NotificationBell(onTap: onBellTap),
-          const SizedBox(width: AppSpacing.sm),
-          // Avatar
-          GestureDetector(
-            onTap: onAvatarTap,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: accent.withAlpha(30),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accent.withAlpha(80), width: 1),
-              ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: AppTypography.labelMedium.copyWith(color: accent),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

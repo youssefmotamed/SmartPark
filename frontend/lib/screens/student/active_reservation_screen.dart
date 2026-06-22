@@ -82,11 +82,19 @@ class _ActiveReservationScreenState extends State<ActiveReservationScreen>
   Future<void> _loadReservation() async {
     await context.read<ReservationProvider>().fetchActiveReservation();
     if (!mounted) return;
-    final res = context.read<ReservationProvider>().activeReservation;
-    if (res == null) {
-      context.go('/student/home');
+
+    final provider = context.read<ReservationProvider>();
+
+    if (provider.activeReservation == null) {
+      // ENTERED → null means the guard just scanned the exit QR.
+      if (provider.justCompleted) {
+        context.go('/student/exit-success');
+      } else {
+        context.go('/student/home');
+      }
       return;
     }
+
     _qrAnimController.forward(from: 0);
   }
 

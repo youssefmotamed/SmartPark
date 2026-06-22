@@ -80,10 +80,27 @@ class AuthProvider extends ChangeNotifier {
 
     if (token == null || role == null) return '/login';
 
-    // Token found — restore user state from the API.
+    // Token found — restore user state.
+    // Only students have a /profile endpoint; guards and admins restore
+    // from stored credentials to avoid role being overwritten as STUDENT.
     try {
-      final profile = await _profileService.getProfile();
-      _currentUser = profile.toUser();
+      if (role == 'STUDENT') {
+        final profile = await _profileService.getProfile();
+        _currentUser = profile.toUser();
+      } else {
+        final storedId = prefs.getInt(ApiConfig.userIdKey) ?? 0;
+        _currentUser = User(
+          id:          storedId,
+          fullName:    '',
+          email:       '',
+          studentId:   '',
+          plateNumber: '',
+          role:        role,
+          isActive:    true,
+          totalPoints: 0,
+          createdAt:   DateTime.now(),
+        );
+      }
       notifyListeners();
     } catch (_) {
       // Access token may be expired — attempt silent refresh.
@@ -97,8 +114,22 @@ class AuthProvider extends ChangeNotifier {
             auth.user.role,
             auth.user.id,
           );
-          final profile = await _profileService.getProfile();
-          _currentUser = profile.toUser();
+          if (auth.user.role == 'STUDENT') {
+            final profile = await _profileService.getProfile();
+            _currentUser = profile.toUser();
+          } else {
+            _currentUser = User(
+              id:          auth.user.id,
+              fullName:    auth.user.fullName,
+              email:       '',
+              studentId:   '',
+              plateNumber: '',
+              role:        auth.user.role,
+              isActive:    true,
+              totalPoints: 0,
+              createdAt:   DateTime.now(),
+            );
+          }
           notifyListeners();
         } catch (_) {
           // Refresh also failed — session is dead.
