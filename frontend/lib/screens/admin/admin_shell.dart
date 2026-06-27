@@ -10,6 +10,7 @@ import '../../config/app_spacing.dart';
 import '../../providers/auth_provider.dart';
 import 'admin_dashboard_screen.dart';
 import 'user_management_screen.dart';
+import 'badge_management_screen.dart';
 
 /// Admin accent — soft purple distinct from student blue and guard amber.
 const _adminAccent = Color(0xFF9C8FFF);
@@ -39,7 +40,7 @@ class _AdminShellState extends State<AdminShell>
   static final _screens = [
     const AdminDashboardScreen(),
     const UserManagementScreen(),
-    const _TabPlaceholder(title: 'Badges', icon: LucideIcons.shield, note: 'Coming in Phase 6'),
+    const BadgeManagementScreen(),
   ];
 
   late final List<AnimationController> _tabControllers;

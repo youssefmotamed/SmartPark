@@ -9,7 +9,7 @@ class ApiConfig {
   /// Backend base URL.
   /// iOS Simulator: localhost resolves to Mac directly.
   /// Android emulator: use 10.0.2.2. Physical device: use machine's LAN IP.
-  static const String baseUrl = 'http://192.168.1.14:8080/api/v1';
+  static const String baseUrl = 'http://172.20.10.4:8080/api/v1';
 
   /// HTTP request timeout in seconds.
   static const int timeoutSeconds = 30;
