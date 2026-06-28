@@ -90,8 +90,9 @@ class _ExitSuccessScreenState extends State<ExitSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
-    final res    = context.read<ReservationProvider>().lastCompletedReservation;
-    final points = res?.pointsEarned ?? 0;
+    final provider = context.read<ReservationProvider>();
+    final res      = provider.lastCompletedReservation;
+    final points   = provider.lastEarnedPoints;
 
     return Scaffold(
       backgroundColor: AppColors.background,

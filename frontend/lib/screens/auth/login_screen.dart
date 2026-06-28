@@ -48,7 +48,11 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ── Demo credentials ───────────────────────────────────────────────────────
   static const _demoUsers = [
-    _DemoUser('youssef@smartpark.com', 'youssef123', 'STUDENT', Color(0xFF26A69A)),
+    _DemoUser('loop1@smartpark.com', 'loop1234', 'STUDENT', Color(0xFF26A69A)),
+    _DemoUser('loop11@smartpark.com', 'loop1234', 'STUDENT', Color(0xFF26A69A)),
+    _DemoUser('loop2@smartpark.com', 'loop1234', 'STUDENT', Color(0xFF26A69A)),
+    _DemoUser('loop3@smartpark.com', 'loop1234', 'STUDENT', Color(0xFF26A69A)),
+    _DemoUser('loop33@smartpark.com', 'loop1234', 'STUDENT', Color(0xFF26A69A)),
     _DemoUser('guard@smartpark.com',  'Guard@2026', 'GUARD',   Color(0xFF455A64)),
     _DemoUser('admin@smartpark.com',  'Admin@2026', 'ADMIN',   Color(0xFFE53935)),
   ];

@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import '../models/reservation_response.dart';
 import '../models/create_reservation_request.dart';
 import '../services/reservation_service.dart';
+import '../services/points_service.dart';
 import '../services/base_api_service.dart';
 
 class ReservationProvider extends ChangeNotifier {
-  final ReservationService _service = ReservationService();
+  final ReservationService _service       = ReservationService();
+  final PointsService      _pointsService = PointsService();
 
   // ── Active reservation ────────────────────────────────────────────────────
   ReservationResponse? _activeReservation;
@@ -16,7 +18,8 @@ class ReservationProvider extends ChangeNotifier {
 
   // ── Exit completion detection ─────────────────────────────────────────────
   ReservationResponse? _lastCompletedReservation;
-  bool                 _justCompleted = false;
+  bool                 _justCompleted     = false;
+  int                  _lastEarnedPoints  = 0;
 
   // ── Create / cancel ───────────────────────────────────────────────────────
   bool    _isCreating  = false;
@@ -49,10 +52,12 @@ class ReservationProvider extends ChangeNotifier {
   bool                      get hasActiveReservation      => _activeReservation != null;
   ReservationResponse?      get lastCompletedReservation  => _lastCompletedReservation;
   bool                      get justCompleted             => _justCompleted;
+  int                       get lastEarnedPoints          => _lastEarnedPoints;
 
   void clearJustCompleted() {
     _justCompleted              = false;
     _lastCompletedReservation   = null;
+    _lastEarnedPoints           = 0;
     notifyListeners();
   }
 
@@ -95,16 +100,22 @@ class ReservationProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetches the completed reservation to surface points and timestamps.
-  /// Tries GET /reservations/{id} first (has all fields), falls back to history.
+  /// Fetches the completed reservation summary and the points earned via
+  /// the points history API (backend's ReservationResponse omits pointsEarned).
   Future<void> _fetchLastCompleted({int? reservationId}) async {
     try {
       if (reservationId != null) {
         _lastCompletedReservation = await _service.getReservation(reservationId);
-        if (_lastCompletedReservation != null) return;
       }
-      final page = await _service.getHistory(page: 0, status: 'COMPLETED');
-      _lastCompletedReservation = page.content.firstOrNull;
+      if (_lastCompletedReservation == null) {
+        final page = await _service.getHistory(page: 0, status: 'COMPLETED');
+        _lastCompletedReservation = page.content.firstOrNull;
+      }
+      // Fetch the most recent EARNED transaction from the points ledger —
+      // the backend doesn't include pointsEarned in the reservation response.
+      final data         = await _pointsService.getHistory(type: 'EARNED', page: 0, size: 1);
+      final transactions = _pointsService.parseTransactions(data);
+      _lastEarnedPoints  = transactions.firstOrNull?.points ?? 0;
     } catch (_) {
       // Silently fail — screen will show 0 pts as fallback
     }
