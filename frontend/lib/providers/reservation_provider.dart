@@ -105,19 +105,22 @@ class ReservationProvider extends ChangeNotifier {
   /// Each block has its own try-catch so a failed reservation fetch cannot
   /// block the points fetch.
   Future<void> _fetchLastCompleted({int? reservationId}) async {
-    // Reservation info (spot label, timestamps for the summary card)
-    try {
-      if (reservationId != null) {
+    // Step 1: try GET /reservations/{id} for spot/duration data.
+    if (reservationId != null) {
+      try {
         _lastCompletedReservation = await _service.getReservation(reservationId);
-      }
-      if (_lastCompletedReservation == null) {
+      } catch (_) {}
+    }
+
+    // Step 2: fall back to history if step 1 failed or returned null.
+    if (_lastCompletedReservation == null) {
+      try {
         final page = await _service.getHistory(page: 0, status: 'COMPLETED');
         _lastCompletedReservation = page.content.firstOrNull;
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
-    // Points earned — fetched from the ledger because the reservation DTO
-    // does not include pointsEarned.
+    // Step 3: fetch points from the ledger — independent of steps 1 & 2.
     try {
       final data         = await _pointsService.getHistory(type: 'EARNED', page: 0, size: 1);
       final transactions = _pointsService.parseTransactions(data);
