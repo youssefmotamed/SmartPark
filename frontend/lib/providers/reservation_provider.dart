@@ -102,7 +102,10 @@ class ReservationProvider extends ChangeNotifier {
 
   /// Fetches the completed reservation summary and the points earned via
   /// the points history API (backend's ReservationResponse omits pointsEarned).
+  /// Each block has its own try-catch so a failed reservation fetch cannot
+  /// block the points fetch.
   Future<void> _fetchLastCompleted({int? reservationId}) async {
+    // Reservation info (spot label, timestamps for the summary card)
     try {
       if (reservationId != null) {
         _lastCompletedReservation = await _service.getReservation(reservationId);
@@ -111,14 +114,15 @@ class ReservationProvider extends ChangeNotifier {
         final page = await _service.getHistory(page: 0, status: 'COMPLETED');
         _lastCompletedReservation = page.content.firstOrNull;
       }
-      // Fetch the most recent EARNED transaction from the points ledger —
-      // the backend doesn't include pointsEarned in the reservation response.
+    } catch (_) {}
+
+    // Points earned — fetched from the ledger because the reservation DTO
+    // does not include pointsEarned.
+    try {
       final data         = await _pointsService.getHistory(type: 'EARNED', page: 0, size: 1);
       final transactions = _pointsService.parseTransactions(data);
       _lastEarnedPoints  = transactions.firstOrNull?.points ?? 0;
-    } catch (_) {
-      // Silently fail — screen will show 0 pts as fallback
-    }
+    } catch (_) {}
   }
 
   /// Creates a reservation. Returns true on success, false on failure.

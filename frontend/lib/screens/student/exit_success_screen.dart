@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../config/colors.dart';
 import '../../models/reservation_response.dart';
 import '../../providers/reservation_provider.dart';
+import '../../services/points_service.dart';
 
 class ExitSuccessScreen extends StatefulWidget {
   const ExitSuccessScreen({super.key});
@@ -22,6 +23,8 @@ class _ExitSuccessScreenState extends State<ExitSuccessScreen>
   late final AnimationController _animController;
   late final Animation<double>   _scaleAnim;
   late final Animation<double>   _fadeAnim;
+
+  int _points = 0;
 
   static const _kGreen   = Color(0xFF4CAF50);
   static const _kPageBg  = Color(0xFFEEF1F7);
@@ -46,6 +49,25 @@ class _ExitSuccessScreenState extends State<ExitSuccessScreen>
       curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
     );
     _animController.forward();
+    _loadPoints();
+  }
+
+  Future<void> _loadPoints() async {
+    // Use points already fetched by the provider if available.
+    final providerPoints = context.read<ReservationProvider>().lastEarnedPoints;
+    if (providerPoints > 0) {
+      setState(() => _points = providerPoints);
+      return;
+    }
+    // Fallback: fetch the most recent EARNED transaction directly.
+    try {
+      final service      = PointsService();
+      final data         = await service.getHistory(type: 'EARNED', page: 0, size: 1);
+      final transactions = service.parseTransactions(data);
+      if (mounted) {
+        setState(() => _points = transactions.firstOrNull?.points ?? 0);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -90,9 +112,8 @@ class _ExitSuccessScreenState extends State<ExitSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.read<ReservationProvider>();
-    final res      = provider.lastCompletedReservation;
-    final points   = provider.lastEarnedPoints;
+    final res    = context.read<ReservationProvider>().lastCompletedReservation;
+    final points = _points;
 
     return Scaffold(
       backgroundColor: AppColors.background,
