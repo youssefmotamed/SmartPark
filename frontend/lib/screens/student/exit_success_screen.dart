@@ -87,10 +87,10 @@ class _ExitSuccessScreenState extends State<ExitSuccessScreen>
     }
   }
 
-  String _formatDuration(ReservationResponse? res) {
+  String _formatDuration(ReservationResponse? res, DateTime? exitAt) {
     if (res == null) return '—';
     final start = res.entryScannedAt ?? res.reservedAt;
-    final end   = res.exitScannedAt  ?? DateTime.now();
+    final end   = res.exitScannedAt  ?? exitAt ?? DateTime.now();
     final diff  = end.difference(start);
     final hours = diff.inHours;
     final mins  = diff.inMinutes.remainder(60);
@@ -112,8 +112,10 @@ class _ExitSuccessScreenState extends State<ExitSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
-    final res    = context.read<ReservationProvider>().lastCompletedReservation;
-    final points = _points;
+    final provider = context.read<ReservationProvider>();
+    final res      = provider.lastCompletedReservation;
+    final exitAt   = provider.exitDetectedAt;
+    final points   = _points;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -300,7 +302,7 @@ class _ExitSuccessScreenState extends State<ExitSuccessScreen>
                                         fontSize: 14, color: _kSub)),
                                 const Spacer(),
                                 Text(
-                                  _formatDuration(res),
+                                  _formatDuration(res, exitAt),
                                   style: GoogleFonts.manrope(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
